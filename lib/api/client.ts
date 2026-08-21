@@ -48,6 +48,9 @@ export type HealthResponse = {
   service: string
   time: string
   domain: { resolved: boolean; sample: string }
+  database?:
+    | { status: 'connected'; tables: number; services: number; agencies: number; tasks: number }
+    | { status: 'unreachable'; error: string }
 }
 
 export const getHealth = () => apiFetch<HealthResponse>('/health')

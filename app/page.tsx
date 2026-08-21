@@ -21,7 +21,7 @@ export default function Page() {
       </p>
       <h1 className="mt-2 text-3xl font-semibold tracking-tight">DeliverX</h1>
       <p className="mt-2 text-sm text-[var(--color-muted)]">
-        Delivery log. Phase 0, step 0.1 — skeleton.
+        Delivery log. Phase 0 — foundations. Screens begin in Phase 1.
       </p>
 
       <dl className="mt-10 divide-y divide-gray-200 border-y border-gray-200 text-sm">
@@ -46,7 +46,18 @@ export default function Page() {
         </Row>
 
         <Row label="Database">
-          <span className="text-[var(--color-muted)]">not wired yet — step 0.2</span>
+          {!data?.database && <span className="text-[var(--color-muted)]">—</span>}
+          {data?.database?.status === 'unreachable' && <Bad>unreachable — {data.database.error}</Bad>}
+          {data?.database?.status === 'connected' && (
+            <Ok>
+              connected — {data.database.tables} tables, {data.database.services} services,{' '}
+              {data.database.agencies} agencies, {data.database.tasks} tasks
+            </Ok>
+          )}
+        </Row>
+
+        <Row label="Login">
+          <span className="text-[var(--color-muted)]">not built yet — step 0.4</span>
         </Row>
       </dl>
 
