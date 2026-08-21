@@ -1,0 +1,14 @@
+@import 'tailwindcss';
+
+/*
+ * Placeholder theme. shadcn/ui lands in Phase 1 and will bring the full
+ * token set; this is just enough to make step 0.1 legible.
+ */
+@theme {
+  --color-ink: #101418;
+  --color-muted: #6b7280;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+}

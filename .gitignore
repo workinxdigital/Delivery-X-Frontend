@@ -1,0 +1,20 @@
+node_modules/
+
+# secrets — never commit (CLAUDE.md §4.7)
+.env
+.env.*
+!.env.example
+
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+coverage/
+
+*.log
+npm-debug.log*
+
+.DS_Store
+.vscode/
+.idea/
