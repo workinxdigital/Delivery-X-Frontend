@@ -2,7 +2,7 @@
 
 Frontend for **DeliverX**, the internal delivery log for WorkinX Digital.
 
-Talks to [deliverx-api](https://github.com/workinxdigital/deliverx-api) over
+Talks to [Delivery-x-backend](https://github.com/workinxdigital/Delivery-x-backend) over
 HTTP. This app has no database connection and no `DATABASE_URL` — all data
 access goes through the API.
 
@@ -22,7 +22,7 @@ access goes through the API.
 
 ## Getting started
 
-The API needs to be running first (see the `deliverx-api` repo).
+The API needs to be running first (see the `Delivery-x-backend` repo).
 
 ```bash
 npm install
