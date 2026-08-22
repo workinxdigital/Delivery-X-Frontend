@@ -151,11 +151,10 @@ export function Combobox({
           }
         }}
         className={cn(
-          'border-input bg-background ring-offset-background flex h-9 w-full items-center justify-between rounded-md border px-3 py-1 text-sm shadow-xs transition-colors',
-          'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none',
-          'disabled:cursor-not-allowed disabled:opacity-50',
-          !selected && 'text-muted-foreground',
-          invalid && 'border-destructive',
+          'border-control bg-surface text-dense flex h-9 w-full items-center justify-between rounded-md border px-2.5 transition-colors duration-[120ms]',
+          'hover:border-ink-muted disabled:cursor-not-allowed disabled:opacity-50',
+          !selected && 'text-ink-muted',
+          invalid && 'border-danger',
         )}
       >
         <span className="truncate">{selected ? selected.label : placeholder}</span>
@@ -163,7 +162,7 @@ export function Combobox({
       </button>
 
       {open && (
-        <div className="bg-popover text-popover-foreground absolute z-50 mt-1 w-full overflow-hidden rounded-md border shadow-md">
+        <div className="bg-surface border-control absolute z-50 mt-1 w-full overflow-hidden rounded-md border shadow-[0_8px_24px_-8px_oklch(0.22_0.012_60_/_18%)]">
           <div className="border-b p-1">
             <Input
               ref={searchRef}
@@ -171,13 +170,13 @@ export function Combobox({
               placeholder={searchPlaceholder}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onListKeyDown}
-              className="h-8 border-0 shadow-none focus-visible:ring-0"
+              className="h-8 border-0 bg-transparent shadow-none focus-visible:outline-none"
             />
           </div>
 
           <ul className="max-h-64 overflow-auto p-1" role="listbox">
             {flat.length === 0 && (
-              <li className="text-muted-foreground px-2 py-3 text-center text-sm">
+              <li className="text-ink-muted px-2 py-3 text-center text-dense">
                 {emptyText}
               </li>
             )}
@@ -186,7 +185,7 @@ export function Combobox({
               <li>
                 <button
                   type="button"
-                  className="text-muted-foreground hover:bg-accent w-full rounded-sm px-2 py-1.5 text-left text-sm"
+                  className="text-ink-muted hover:bg-wash w-full rounded-sm px-2 py-1.5 text-left text-dense"
                   onClick={() => {
                     onChange('')
                     close()
@@ -200,7 +199,7 @@ export function Combobox({
             {grouped.map((group) => (
               <li key={group.name || '_'}>
                 {group.name && (
-                  <div className="text-muted-foreground px-2 pt-2 pb-1 text-xs font-medium">
+                  <div className="text-ink-faint px-2 pt-2 pb-1 text-micro font-medium">
                     {group.name}
                   </div>
                 )}
@@ -217,8 +216,8 @@ export function Combobox({
                           onMouseEnter={() => setHighlight(i)}
                           onClick={() => commit(option)}
                           className={cn(
-                            'flex w-full items-start gap-2 rounded-sm px-2 py-1.5 text-left text-sm',
-                            i === highlight && 'bg-accent text-accent-foreground',
+                            'text-dense flex w-full items-start gap-2 rounded-sm px-2 py-1.5 text-left',
+                            i === highlight && 'bg-wash',
                           )}
                         >
                           <Check
@@ -230,7 +229,7 @@ export function Combobox({
                           <span className="min-w-0">
                             <span className="block truncate">{option.label}</span>
                             {option.hint && (
-                              <span className="text-muted-foreground block text-xs">
+                              <span className="text-ink-muted block text-micro">
                                 {option.hint}
                               </span>
                             )}

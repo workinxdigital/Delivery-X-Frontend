@@ -1,14 +1,13 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { BrandInput } from '@/components/brand-input'
 import { Combobox, type ComboboxOption } from '@/components/combobox'
-import { Button } from '@/components/ui/button'
+import { Band, Field } from '@/components/field'
+import { Segmented } from '@/components/segmented'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   ApiError,
   checkDuplicate,
@@ -69,7 +68,7 @@ export function LogDeliveryForm() {
   const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: getUsers })
 
   // Auth is deferred, so "delivered by" cannot default to the signed-in user.
-  // Default to the first PM instead, and say so in the field's help text.
+  // Default to a PM instead, and say so in the field's helper line.
   useEffect(() => {
     if (form.deliveredById || users.length === 0) return
     const fallback = users.find((u) => u.role === 'PM') ?? users[0]
@@ -104,10 +103,11 @@ export function LogDeliveryForm() {
   }))
 
   const selectedAgency = agencies.find((a) => a.id === form.agencyId)
+  const selectedService = services.find((s) => s.id === form.serviceId)
 
   // Only ask about duplicates once every identifying field is filled in.
   const duplicateKey =
-    form.agencyId && form.brandName.trim() && form.serviceId && form.complexity && form.deliveredOn
+    form.agencyId && form.brandName.trim() && form.serviceId && form.complexity
       ? {
           agencyId: form.agencyId,
           brandName: form.brandName.trim(),
@@ -127,18 +127,13 @@ export function LogDeliveryForm() {
   const mutation = useMutation({
     mutationFn: createTask,
     onSuccess: (result) => {
-      toast.success(`Logged ${result.task.taskCode}`, {
-        description: [
-          `${result.task.brandName} · ${result.task.serviceName}`,
-          result.brandCreated ? 'New brand created.' : null,
-          result.variationWarning,
-        ]
-          .filter(Boolean)
-          .join(' — '),
+      toast(result.task.taskCode, {
+        description: `${result.task.brandName} · ${result.task.serviceName}${result.brandCreated ? ' · new brand created' : ''}`,
       })
+      if (result.variationWarning) toast.warning(result.variationWarning)
 
       // Reset, but keep agency and brand: PMs log several for one brand in a
-      // row, and retyping them every time is the main source of friction (§5.1).
+      // row, and retyping them is the main source of friction (§5.1).
       setForm((f) => ({
         ...EMPTY,
         agencyId: f.agencyId,
@@ -171,12 +166,10 @@ export function LogDeliveryForm() {
     if (!form.serviceId) next.serviceId = 'Pick a service'
     if (!form.complexity) next.complexity = 'Pick a complexity'
     const variations = Number(form.variationCount)
-    if (!Number.isInteger(variations) || variations < 1) {
-      next.variationCount = 'At least 1'
-    }
+    if (!Number.isInteger(variations) || variations < 1) next.variationCount = 'At least 1'
     if (!form.title.trim()) next.title = 'Give the task a title'
     if (!form.deliveredOn) next.deliveredOn = 'Pick a date'
-    if (form.deliveredOn > todayInIST()) next.deliveredOn = 'Cannot be in the future'
+    else if (form.deliveredOn > todayInIST()) next.deliveredOn = 'Cannot be in the future'
     if (!form.deliveredById) next.deliveredById = 'Pick who delivered it'
     setErrors(next)
     return Object.keys(next).length === 0
@@ -186,9 +179,6 @@ export function LogDeliveryForm() {
     if (!validate()) return
     if (duplicate && !duplicateAck) {
       setDuplicateAck(true)
-      toast.warning('Looks like a duplicate', {
-        description: `${duplicate.taskCode} matches this. Press Save again to log it anyway.`,
-      })
       return
     }
     mutation.mutate({
@@ -206,10 +196,10 @@ export function LogDeliveryForm() {
   }
 
   const variations = Number(form.variationCount)
-  const variationWarning =
+  const variationHint =
     Number.isFinite(variations) && variations > VARIATION_SOFT_LIMIT
-      ? `${variations} variations is unusually high — worth a check.`
-      : null
+      ? `${variations} is unusually high. Worth a check.`
+      : undefined
 
   return (
     <form
@@ -218,211 +208,216 @@ export function LogDeliveryForm() {
         submit()
       }}
       onKeyDown={(e) => {
-        // Cmd/Ctrl+Enter saves from anywhere in the form.
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
           e.preventDefault()
           submit()
         }
       }}
-      className="space-y-5"
+      /* Bands separated by hairlines. A ledger is ruled, not boxed. */
+      className="divide-rule divide-y"
     >
-      <Field label="Agency / Client" htmlFor="agency" error={errors.agencyId}>
-        <Combobox
-          id="agency"
-          options={agencyOptions}
-          value={form.agencyId}
-          invalid={Boolean(errors.agencyId)}
-          placeholder="Select an agency or direct client"
-          searchPlaceholder="Search agencies…"
-          onChange={(v) => {
-            // Brands are scoped to an agency, so changing it clears the brand (§2.7).
-            setForm((f) => ({ ...f, agencyId: v, brandName: '' }))
-            setErrors((e) => ({ ...e, agencyId: '', brandName: '' }))
-          }}
-        />
-      </Field>
-
-      <Field
-        label="Brand"
-        htmlFor="brand"
-        error={errors.brandName}
-        hint={
-          selectedAgency
-            ? 'Type freely — a new brand is created on save if it does not exist.'
-            : undefined
-        }
-      >
-        <BrandInput
-          id="brand"
-          agencyId={form.agencyId}
-          value={form.brandName}
-          onChange={(v) => set('brandName', v)}
-          invalid={Boolean(errors.brandName)}
-        />
-      </Field>
-
-      <Field label="Service" htmlFor="service" error={errors.serviceId}>
-        <Combobox
-          id="service"
-          options={serviceOptions}
-          value={form.serviceId}
-          invalid={Boolean(errors.serviceId)}
-          placeholder="Select a service"
-          searchPlaceholder="Search the catalogue…"
-          onChange={(v) => set('serviceId', v)}
-        />
-      </Field>
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Complexity" error={errors.complexity}>
-          {/* 2x2 rather than 1x4: 'Standalone' does not fit in a quarter column. */}
-          <div className="grid grid-cols-2 gap-1.5">
-            {COMPLEXITIES.map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                onClick={() => set('complexity', c.value)}
-                className={cn(
-                  'rounded-md border px-2 py-2 text-xs font-medium transition-colors',
-                  form.complexity === c.value
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'hover:bg-accent',
-                  errors.complexity && 'border-destructive',
-                )}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
+      <Band title="Who it is for" className="pb-7">
+        <Field label="Agency or direct client" htmlFor="agency" error={errors.agencyId}>
+          <Combobox
+            id="agency"
+            options={agencyOptions}
+            value={form.agencyId}
+            invalid={Boolean(errors.agencyId)}
+            placeholder="Select"
+            searchPlaceholder="Search agencies"
+            clearable={false}
+            onChange={(v) => {
+              // Brands are scoped to an agency, so changing it clears the brand (§2.7).
+              setForm((f) => ({ ...f, agencyId: v, brandName: '' }))
+              setErrors((e) => ({ ...e, agencyId: '', brandName: '' }))
+            }}
+          />
         </Field>
 
         <Field
-          label="Variations"
-          htmlFor="variations"
-          error={errors.variationCount}
-          hint={variationWarning ?? 'How many variations shipped.'}
+          label="Brand"
+          htmlFor="brand"
+          error={errors.brandName}
+          hint={
+            selectedAgency
+              ? `${selectedAgency.freeRevisionAllowance} free revision${selectedAgency.freeRevisionAllowance === 1 ? '' : 's'} on this contract.`
+              : undefined
+          }
         >
-          <Input
-            id="variations"
-            type="number"
-            min={1}
-            step={1}
-            className="tabular"
-            value={form.variationCount}
-            aria-invalid={Boolean(errors.variationCount)}
-            onChange={(e) => set('variationCount', e.target.value)}
+          <BrandInput
+            id="brand"
+            agencyId={form.agencyId}
+            value={form.brandName}
+            onChange={(v) => set('brandName', v)}
+            invalid={Boolean(errors.brandName)}
           />
         </Field>
-      </div>
+      </Band>
 
-      <Field label="Task title" htmlFor="title" error={errors.title}>
-        <Input
-          id="title"
-          ref={titleRef}
-          value={form.title}
-          placeholder="What was delivered"
-          aria-invalid={Boolean(errors.title)}
-          onChange={(e) => set('title', e.target.value)}
-        />
-      </Field>
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Delivered on" htmlFor="deliveredOn" error={errors.deliveredOn}>
-          <Input
-            id="deliveredOn"
-            type="date"
-            max={todayInIST()}
-            className="tabular"
-            value={form.deliveredOn}
-            aria-invalid={Boolean(errors.deliveredOn)}
-            onChange={(e) => set('deliveredOn', e.target.value)}
-          />
-        </Field>
-
+      <Band title="What shipped" className="py-7">
         <Field
-          label="Delivered by"
-          htmlFor="deliveredBy"
-          error={errors.deliveredById}
-          hint="Defaults to a PM until sign-in exists."
+          label="Service"
+          htmlFor="service"
+          error={errors.serviceId}
+          hint={
+            selectedService?.isBundle
+              ? selectedService.components.map((c) => c.name).join(' + ')
+              : undefined
+          }
         >
           <Combobox
-            id="deliveredBy"
-            options={userOptions}
-            value={form.deliveredById}
-            invalid={Boolean(errors.deliveredById)}
-            placeholder="Select a person"
-            searchPlaceholder="Search people…"
-            onChange={(v) => set('deliveredById', v)}
+            id="service"
+            options={serviceOptions}
+            value={form.serviceId}
+            invalid={Boolean(errors.serviceId)}
+            placeholder="Select"
+            searchPlaceholder="Search the catalogue"
+            clearable={false}
+            onChange={(v) => set('serviceId', v)}
           />
         </Field>
-      </div>
 
-      <Field label="ClickUp task ID or URL" htmlFor="clickup" hint="Optional.">
-        <Input
-          id="clickup"
-          value={form.clickupTaskId}
-          placeholder="Optional"
-          onChange={(e) => set('clickupTaskId', e.target.value)}
-        />
-      </Field>
+        <div className="grid gap-4 sm:grid-cols-[1fr_7rem]">
+          <Field label="Complexity" error={errors.complexity}>
+            <Segmented
+              name="Complexity"
+              options={COMPLEXITIES}
+              value={form.complexity}
+              invalid={Boolean(errors.complexity)}
+              onChange={(v) => set('complexity', v)}
+            />
+          </Field>
 
-      <Field label="Notes" htmlFor="notes" hint="Optional.">
-        <Textarea
-          id="notes"
-          rows={2}
-          value={form.notes}
-          placeholder="Optional"
-          onChange={(e) => set('notes', e.target.value)}
-        />
-      </Field>
+          <Field
+            label="Variations"
+            htmlFor="variations"
+            error={errors.variationCount}
+            hint={variationHint}
+          >
+            <Input
+              id="variations"
+              type="number"
+              min={1}
+              step={1}
+              value={form.variationCount}
+              aria-invalid={Boolean(errors.variationCount)}
+              onChange={(e) => set('variationCount', e.target.value)}
+            />
+          </Field>
+        </div>
 
-      {duplicate && (
-        <div className="border-amber-500/40 bg-amber-500/10 rounded-md border p-3 text-sm">
-          <p className="font-medium text-amber-700 dark:text-amber-400">
-            Possible duplicate
-          </p>
-          <p className="text-muted-foreground mt-0.5">
-            <span className="font-mono">{duplicate.taskCode}</span> — “{duplicate.title}” was
-            logged minutes ago with the same agency, brand, service, complexity and date.
-            Saving is still allowed; genuine duplicates happen.
+        <Field label="Task title" htmlFor="title" error={errors.title}>
+          <Input
+            id="title"
+            ref={titleRef}
+            value={form.title}
+            placeholder="What was delivered"
+            aria-invalid={Boolean(errors.title)}
+            onChange={(e) => set('title', e.target.value)}
+          />
+        </Field>
+      </Band>
+
+      <Band title="When and who" className="py-7">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Delivered on" htmlFor="deliveredOn" error={errors.deliveredOn}>
+            <Input
+              id="deliveredOn"
+              type="date"
+              max={todayInIST()}
+              value={form.deliveredOn}
+              aria-invalid={Boolean(errors.deliveredOn)}
+              onChange={(e) => set('deliveredOn', e.target.value)}
+            />
+          </Field>
+
+          <Field
+            label="Delivered by"
+            htmlFor="deliveredBy"
+            error={errors.deliveredById}
+            hint="Defaults to a PM until sign-in exists."
+          >
+            <Combobox
+              id="deliveredBy"
+              options={userOptions}
+              value={form.deliveredById}
+              invalid={Boolean(errors.deliveredById)}
+              placeholder="Select"
+              searchPlaceholder="Search people"
+              clearable={false}
+              onChange={(v) => set('deliveredById', v)}
+            />
+          </Field>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="ClickUp task" htmlFor="clickup" optional>
+            <Input
+              id="clickup"
+              value={form.clickupTaskId}
+              placeholder="ID or URL"
+              onChange={(e) => set('clickupTaskId', e.target.value)}
+            />
+          </Field>
+
+          <Field label="Notes" htmlFor="notes" optional>
+            <Input
+              id="notes"
+              value={form.notes}
+              placeholder="Anything worth recording"
+              onChange={(e) => set('notes', e.target.value)}
+            />
+          </Field>
+        </div>
+      </Band>
+
+      {/*
+        Sticky action bar: the save button is never below the fold, which is the
+        difference between a 20-second entry and a 40-second one.
+      */}
+      {/* Solid, not translucent: a blurred bar over a scrolling form reads as
+          mush, and this one has to stay legible while fields pass under it. */}
+      <div className="border-rule bg-paper sticky bottom-0 -mx-6 border-t px-6 py-4">
+        {duplicate && (
+          <div
+            className={cn(
+              'mb-3 rounded-md px-3 py-2 text-dense',
+              // The only chromatic colour in the product means "beyond
+              // allowance", so a duplicate warning must not borrow it. Neutral
+              // wash with a rule instead.
+              'border-rule-strong bg-wash border',
+            )}
+          >
+            <span className="code">{duplicate.taskCode}</span>{' '}
+            <span className="text-ink-muted">
+              matches this exactly and was logged minutes ago.
+              {duplicateAck
+                ? ' Press save again to log it anyway.'
+                : ' Saving is allowed; genuine duplicates happen.'}
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-4">
+          <button
+            type="submit"
+            disabled={mutation.isPending}
+            className="bg-ink text-primary-foreground text-dense hover:bg-ink/90 rounded-md px-4 py-2 font-medium transition-colors duration-[120ms] disabled:opacity-50"
+          >
+            {mutation.isPending
+              ? 'Saving'
+              : duplicateAck
+                ? 'Save anyway'
+                : 'Save delivery'}
+          </button>
+
+          <p className="text-ink-faint text-micro">
+            <kbd className="text-ink-muted font-sans">⌘</kbd>
+            <kbd className="text-ink-muted font-sans">↵</kbd> to save. Agency and brand
+            are kept for the next entry.
           </p>
         </div>
-      )}
-
-      <div className="flex items-center gap-3 pt-1">
-        <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? 'Saving…' : duplicateAck ? 'Save anyway' : 'Save delivery'}
-        </Button>
-        <span className="text-muted-foreground text-xs">
-          ⌘/Ctrl + Enter to save. Agency and brand are kept for the next entry.
-        </span>
       </div>
     </form>
-  )
-}
-
-function Field({
-  label,
-  htmlFor,
-  error,
-  hint,
-  children,
-}: {
-  label: string
-  htmlFor?: string
-  error?: string
-  hint?: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-      {error ? (
-        <p className="text-destructive text-xs">{error}</p>
-      ) : hint ? (
-        <p className="text-muted-foreground text-xs">{hint}</p>
-      ) : null}
-    </div>
   )
 }

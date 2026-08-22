@@ -1,77 +1,127 @@
 @import 'tailwindcss';
-@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Theme tokens.
+ * DeliverX — a ledger, in ink on paper. See DESIGN.md.
  *
- * Defined here in full rather than relying on the package defaults, because a
- * missing token resolves to nothing rather than erroring — which showed up as
- * a transparent popover and a see-through page background.
+ * The interface is monochrome. --beyond is the only chromatic colour and it
+ * means exactly one thing: a revision round past the agency's allowance. If
+ * colour appears on screen, scope has leaked. Colour is information here, not
+ * decoration, which is why there is no "success green" and no accent blue.
  *
- * DeliverX is a dense internal data tool: tables, filters, forms. The palette
- * stays deliberately plain. The interesting decisions in this app are in the
- * data, not the chrome.
+ * Every neutral is tinted warm (hue ~70) so surfaces read as paper, not screen
+ * grey. No #000, no #fff anywhere.
  */
 :root {
-  --radius: 0.625rem;
+  --radius: 6px;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --paper: oklch(0.985 0.004 75);
+  --surface: oklch(0.998 0.002 75);
+  --ink: oklch(0.22 0.012 60);
+  --ink-muted: oklch(0.52 0.008 70);
+  /* Decoration only: em-dashes, disabled states, the keyboard hint. Never
+     placeholder or informational text, which uses --ink-muted at 5.3:1. */
+  --ink-faint: oklch(0.62 0.007 70);
+  /* Decorative rules: row separators, band dividers. Not a control boundary,
+     so they are free to stay soft. */
+  --rule: oklch(0.9 0.006 75);
+  --rule-strong: oklch(0.84 0.007 75);
+  --wash: oklch(0.965 0.005 75);
 
-  /* Within vs beyond allowance. A count, never a charge (CLAUDE.md §2.6). */
-  --within: oklch(0.596 0.145 163.225);
-  --beyond: oklch(0.666 0.179 58.318);
+  /* Interactive boundaries: inputs, comboboxes, segmented control, buttons.
+     Measured at 3.25:1 against --paper, because WCAG 1.4.11 wants 3:1 for the
+     edge that tells you a control is a control. Our inputs share the page
+     background, so the border is the only affordance and has to carry it. */
+  --control: oklch(0.64 0.008 75);
+
+  /* The only accent. Rounds beyond allowance (CLAUDE.md §2.6). */
+  --beyond: oklch(0.55 0.155 45);
+  --beyond-wash: oklch(0.95 0.03 60);
+
+  --danger: oklch(0.52 0.18 25);
+  --danger-wash: oklch(0.955 0.02 25);
+
+  /* shadcn component contract, mapped onto the ledger palette. */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: oklch(0.985 0.004 80);
+  --secondary: var(--wash);
+  --secondary-foreground: var(--ink);
+  --muted: var(--wash);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--wash);
+  --accent-foreground: var(--ink);
+  --destructive: var(--danger);
+  --destructive-foreground: oklch(0.985 0.004 80);
+  --border: var(--rule);
+  --input: var(--control);
+  --ring: var(--ink);
 }
 
+/*
+ * Dark is a preference, not the identity. The PM works under bright office
+ * light beside light-mode tools all day (PRODUCT.md), so light is the default.
+ * Chroma rises slightly as lightness drops, so the accent stays legible
+ * without glowing.
+ */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.556 0 0);
+  --paper: oklch(0.19 0.006 70);
+  --surface: oklch(0.235 0.007 70);
+  --ink: oklch(0.95 0.004 80);
+  --ink-muted: oklch(0.7 0.008 75);
+  --ink-faint: oklch(0.6 0.008 70);
+  --rule: oklch(0.32 0.008 70);
+  --rule-strong: oklch(0.4 0.009 70);
+  --wash: oklch(0.26 0.008 70);
+  --control: oklch(0.52 0.011 70);
 
-  --within: oklch(0.72 0.15 163);
-  --beyond: oklch(0.78 0.16 70);
+  --beyond: oklch(0.75 0.14 55);
+  --beyond-wash: oklch(0.3 0.05 50);
+
+  --danger: oklch(0.7 0.16 25);
+  --danger-wash: oklch(0.29 0.05 25);
+
+  --primary: oklch(0.95 0.004 80);
+  --primary-foreground: oklch(0.2 0.008 70);
+  --ring: oklch(0.75 0.006 75);
 }
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+
+  /* Fixed scale, ratio ~1.2. Dense, because this is a data tool. */
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1rem;
+  --text-small: 0.75rem;
+  --text-small--line-height: 1.125rem;
+  --text-dense: 0.8125rem;
+  --text-dense--line-height: 1.25rem;
+
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-control: var(--control);
+  --color-wash: var(--wash);
+  --color-beyond: var(--beyond);
+  --color-beyond-wash: var(--beyond-wash);
+  --color-danger: var(--danger);
+  --color-danger-wash: var(--danger-wash);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -92,25 +142,57 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-within: var(--within);
-  --color-beyond: var(--beyond);
+
+  /* ease-out-quart. State changes only; nothing decorative. */
+  --ease-out-quart: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--rule);
   }
 
   html {
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
   body {
-    @apply bg-background text-foreground;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    /* Explicit base: unstyled text should land at 14px, not the browser's 16. */
+    font-size: 0.875rem;
+    line-height: 1.5;
+    /* Every numeral in the product aligns down a column. This is a ledger. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Focus is always visible, never removed. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Native date inputs: match the ink palette rather than the browser's blue. */
+  input[type='date'] {
+    accent-color: var(--ink);
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator {
+    opacity: 0.45;
+    cursor: pointer;
+    transition: opacity 120ms var(--ease-out-quart);
+  }
+
+  input[type='date']:hover::-webkit-calendar-picker-indicator {
+    opacity: 0.8;
   }
 }
 
-/* Tabular figures so counts and dates line up down a column. */
-.tabular {
-  font-variant-numeric: tabular-nums;
+/* Identifiers read as identifiers. */
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  letter-spacing: -0.02em;
 }

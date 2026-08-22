@@ -1,15 +1,14 @@
 import { LedgerTable } from './ledger-table'
 
-export const metadata = { title: 'Task Ledger — DeliverX' }
+export const metadata = { title: 'Ledger — DeliverX' }
 
 export default function LedgerPage() {
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Task Ledger</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Everything logged. Filters apply to the CSV export too, so the numbers you see
-          are the numbers you get.
+      <div className="border-rule mb-6 border-b pb-5">
+        <h1 className="text-[1.375rem] font-semibold tracking-tight">Ledger</h1>
+        <p className="text-ink-muted mt-1 text-dense">
+          Everything logged. The export carries whatever the filters show.
         </p>
       </div>
       <LedgerTable />

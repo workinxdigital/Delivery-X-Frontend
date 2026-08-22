@@ -12,11 +12,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-background text-foreground min-h-screen antialiased">
+      <body className="min-h-screen">
         <Providers>
           <Nav />
-          <main className="mx-auto w-full max-w-7xl px-6 py-8">{children}</main>
-          <Toaster position="top-center" richColors />
+          <main className="mx-auto w-full max-w-[1240px] px-6 py-10">{children}</main>
+          {/*
+            No richColors: success feedback is ink, not green. The tone is
+            "recorded", not "well done" (PRODUCT.md).
+          */}
+          <Toaster position="bottom-right" />
         </Providers>
       </body>
     </html>

@@ -1,39 +1,15 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { Download, X } from 'lucide-react'
 import { useState } from 'react'
-import { Combobox, type ComboboxOption } from '@/components/combobox'
-import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { exportCsvUrl, getAgencies, getServices, getTasks, getUsers } from '@/lib/api/client'
-import type { Complexity, TaskFilters, TaskStatus } from '@/lib/api/types'
-import { COMPLEXITY_LABELS, STATUS_LABELS, formatDateOnly, formatTimestamp } from '@/lib/format'
+import type { TaskFilters } from '@/lib/api/types'
+import { COMPLEXITY_LABELS, formatDateOnly, formatTimestamp } from '@/lib/format'
+import { cn } from '@/lib/utils'
+import { FilterBar } from './filter-bar'
 
-const COMPLEXITY_OPTIONS: ComboboxOption[] = (
-  ['LOW', 'MEDIUM', 'HIGH', 'STANDALONE'] as Complexity[]
-).map((c) => ({ value: c, label: COMPLEXITY_LABELS[c] }))
-
-const STATUS_OPTIONS: ComboboxOption[] = (
-  ['DELIVERED', 'REVISION_IN_PROGRESS', 'CLOSED'] as TaskStatus[]
-).map((s) => ({ value: s, label: STATUS_LABELS[s] }))
-
-const EDITED_OPTIONS: ComboboxOption[] = [
-  { value: 'yes', label: 'Edited only' },
-  { value: 'no', label: 'Never edited' },
-]
+const COLUMNS = 10
 
 export function LedgerTable() {
   const [filters, setFilters] = useState<TaskFilters>({ page: 1, pageSize: 50 })
@@ -45,272 +21,172 @@ export function LedgerTable() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['tasks', filters],
     queryFn: () => getTasks(filters),
-    // The ledger is a live view of what has shipped, so refresh on return.
     refetchOnWindowFocus: true,
   })
 
   const set = <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) =>
     setFilters((f) => ({ ...f, [key]: value || undefined, page: 1 }))
 
-  const activeCount = Object.entries(filters).filter(
+  const hasFilters = Object.entries(filters).some(
     ([k, v]) => !['page', 'pageSize', 'sort', 'dir'].includes(k) && v,
-  ).length
+  )
 
   return (
-    <div className="space-y-4">
-      <div className="bg-card rounded-lg border p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Filter label="Search">
-            <Input
-              placeholder="Title, code or brand"
-              value={filters.q ?? ''}
-              onChange={(e) => set('q', e.target.value)}
-            />
-          </Filter>
+    <div className="space-y-5">
+      <FilterBar
+        filters={filters}
+        onChange={set}
+        onClear={() => setFilters({ page: 1, pageSize: 50 })}
+        agencies={agencies}
+        services={services}
+        users={users}
+        total={data?.total}
+        exportHref={exportCsvUrl(filters)}
+      />
 
-          <Filter label="Agency">
-            <Combobox
-              options={agencies.map((a) => ({ value: a.id, label: a.name }))}
-              value={filters.agencyId ?? ''}
-              onChange={(v) => set('agencyId', v)}
-              placeholder="All agencies"
-            />
-          </Filter>
-
-          <Filter label="Service">
-            <Combobox
-              options={services.map((s) => ({
-                value: s.id,
-                label: s.name,
-                group: s.isBundle ? 'Bundles' : s.category,
-              }))}
-              value={filters.serviceId ?? ''}
-              onChange={(v) => set('serviceId', v)}
-              placeholder="All services"
-            />
-          </Filter>
-
-          <Filter label="Complexity">
-            <Combobox
-              options={COMPLEXITY_OPTIONS}
-              value={filters.complexity ?? ''}
-              onChange={(v) => set('complexity', v as Complexity)}
-              placeholder="All tiers"
-            />
-          </Filter>
-
-          <Filter label="From">
-            <Input
-              type="date"
-              className="tabular"
-              value={filters.from ?? ''}
-              onChange={(e) => set('from', e.target.value)}
-            />
-          </Filter>
-
-          <Filter label="To">
-            <Input
-              type="date"
-              className="tabular"
-              value={filters.to ?? ''}
-              onChange={(e) => set('to', e.target.value)}
-            />
-          </Filter>
-
-          <Filter label="Delivered by">
-            <Combobox
-              options={users.map((u) => ({ value: u.id, label: u.name }))}
-              value={filters.deliveredById ?? ''}
-              onChange={(v) => set('deliveredById', v)}
-              placeholder="Anyone"
-            />
-          </Filter>
-
-          <Filter label="Edited">
-            <Combobox
-              options={EDITED_OPTIONS}
-              value={filters.edited ?? ''}
-              onChange={(v) => set('edited', v as 'yes' | 'no')}
-              placeholder="Any"
-            />
-          </Filter>
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <Combobox
-            options={STATUS_OPTIONS}
-            value={filters.status ?? ''}
-            onChange={(v) => set('status', v as TaskStatus)}
-            placeholder="All statuses"
-          />
-          {activeCount > 0 && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setFilters({ page: 1, pageSize: 50 })}
-            >
-              <X className="size-3.5" />
-              Clear {activeCount} filter{activeCount === 1 ? '' : 's'}
-            </Button>
-          )}
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-muted-foreground text-sm tabular">
-              {isLoading ? '—' : `${data?.total ?? 0} task${data?.total === 1 ? '' : 's'}`}
-            </span>
-            {/* A download is navigation, so this is a real anchor styled as a
-                button, rather than a button component pretending to be a link. */}
-            <a
-              href={exportCsvUrl(filters)}
-              className={buttonVariants({ variant: 'outline', size: 'sm' })}
-            >
-              <Download className="size-3.5" />
-              Export CSV
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-card overflow-x-auto rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Code</TableHead>
-              <TableHead>Delivered</TableHead>
-              <TableHead>Agency</TableHead>
-              <TableHead>Brand</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Complexity</TableHead>
-              <TableHead className="text-right">Var.</TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead className="text-right">Revisions</TableHead>
-              <TableHead>By</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      {/*
+        No card wrapper. The ledger sits on the paper and its rows are ruled,
+        which is what a register looks like (DESIGN.md).
+      */}
+      <div className="-mx-2 overflow-x-auto px-2">
+        <table className="w-full border-collapse text-dense">
+          <thead>
+            <tr className="border-rule-strong border-b">
+              <Th>Code</Th>
+              <Th>Delivered</Th>
+              <Th>Agency</Th>
+              <Th>Brand</Th>
+              <Th>Service</Th>
+              <Th>Complexity</Th>
+              <Th align="right">Var.</Th>
+              <Th>Title</Th>
+              <Th align="right">Revisions</Th>
+              <Th>By</Th>
+            </tr>
+          </thead>
+          <tbody>
             {isLoading &&
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell colSpan={11}>
-                    <Skeleton className="h-5 w-full" />
-                  </TableCell>
-                </TableRow>
+              Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i} className="border-rule border-b">
+                  <td colSpan={COLUMNS} className="py-2.5">
+                    <Skeleton className="h-4 w-full" />
+                  </td>
+                </tr>
               ))}
 
             {isError && (
-              <TableRow>
-                <TableCell colSpan={11} className="text-destructive py-8 text-center">
+              <tr>
+                <td colSpan={COLUMNS} className="text-danger py-12 text-center">
                   {error instanceof Error ? error.message : 'Could not load the ledger'}
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             )}
 
             {data?.tasks.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={11} className="text-muted-foreground py-10 text-center">
-                  {activeCount > 0
-                    ? 'Nothing matches these filters.'
-                    : 'Nothing logged yet.'}
-                </TableCell>
-              </TableRow>
+              <tr>
+                <td colSpan={COLUMNS} className="py-16 text-center">
+                  {/* Empty states teach rather than saying "no data". */}
+                  <p className="text-ink font-medium">
+                    {hasFilters ? 'Nothing matches these filters' : 'Nothing logged yet'}
+                  </p>
+                  <p className="text-ink-muted mt-1 text-dense">
+                    {hasFilters
+                      ? 'Clear a filter to widen the search.'
+                      : 'Deliveries appear here the moment a PM logs one.'}
+                  </p>
+                </td>
+              </tr>
             )}
 
             {data?.tasks.map((task) => (
-              <TableRow key={task.id}>
-                <TableCell className="font-mono text-xs whitespace-nowrap">
-                  {task.taskCode}
-                </TableCell>
-                <TableCell className="tabular whitespace-nowrap">
-                  {formatDateOnly(task.deliveredOn)}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
+              <tr
+                key={task.id}
+                className="border-rule hover:bg-wash border-b transition-colors duration-[120ms]"
+              >
+                <Td className="code text-ink-muted whitespace-nowrap">{task.taskCode}</Td>
+                <Td className="whitespace-nowrap">{formatDateOnly(task.deliveredOn)}</Td>
+                <Td className="whitespace-nowrap">
                   {task.agencyName}
                   {task.agencyType === 'DIRECT' && (
-                    <span className="text-muted-foreground ml-1 text-xs">direct</span>
+                    <span className="text-ink-faint ml-1.5 text-micro">direct</span>
                   )}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">{task.brandName}</TableCell>
-                <TableCell className="whitespace-nowrap">
+                </Td>
+                <Td className="whitespace-nowrap font-medium">{task.brandName}</Td>
+                <Td className="whitespace-nowrap">
                   {task.serviceName}
                   {task.isBundle && (
-                    <Badge variant="secondary" className="ml-1.5 text-[10px]">
+                    <span className="border-rule text-ink-muted ml-1.5 rounded-sm border px-1 text-micro">
                       bundle
-                    </Badge>
+                    </span>
                   )}
-                </TableCell>
-                <TableCell>{COMPLEXITY_LABELS[task.complexity]}</TableCell>
-                <TableCell className="tabular text-right">{task.variationCount}</TableCell>
-                <TableCell className="max-w-[22ch] truncate" title={task.title}>
+                </Td>
+                <Td className="text-ink-muted">{COMPLEXITY_LABELS[task.complexity]}</Td>
+                <Td align="right">{task.variationCount}</Td>
+                <Td className="max-w-[24ch] truncate" title={task.title}>
                   {task.title}
-                </TableCell>
-                <TableCell className="tabular text-right whitespace-nowrap">
+                </Td>
+                <Td align="right" className="whitespace-nowrap">
                   {task.revisionRoundCount === 0 ? (
-                    <span className="text-muted-foreground">—</span>
+                    <span className="text-ink-faint">—</span>
                   ) : (
                     <span>
                       {task.revisionRoundCount}
+                      {/*
+                        The only place colour appears in the product. It means
+                        exactly one thing: rounds past the allowance snapshotted
+                        on this task (CLAUDE.md §2.6). A count, never a charge.
+                      */}
                       {task.roundsBeyondAllowance > 0 && (
-                        <Tooltip>
-                          {/* Default trigger element, i.e. a real button: it is
-                              focusable, so the explanation is reachable by
-                              keyboard rather than hover-only. */}
-                          <TooltipTrigger className="text-beyond ml-1 font-medium underline decoration-dotted">
-                            +{task.roundsBeyondAllowance}
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {task.roundsBeyondAllowance} beyond the allowance of{' '}
-                            {task.freeRevisionAllowanceSnapshot} in force when this was logged
-                          </TooltipContent>
-                        </Tooltip>
+                        <span
+                          className="text-beyond ml-1.5 font-medium"
+                          title={`${task.roundsBeyondAllowance} beyond the allowance of ${task.freeRevisionAllowanceSnapshot} in force when this was logged`}
+                        >
+                          +{task.roundsBeyondAllowance}
+                        </span>
                       )}
                     </span>
                   )}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">{task.deliveredByName}</TableCell>
-                <TableCell>
-                  {/* The badge appears only once there is something to report (§5.3). */}
+                </Td>
+                <Td className="text-ink-muted whitespace-nowrap">
+                  {task.deliveredByName}
+                  {/* The badge only appears once there is something to report (§5.3). */}
                   {task.editCount > 0 && (
-                    <Tooltip>
-                      <TooltipTrigger className="border-border text-muted-foreground rounded-full border px-2 py-0.5 text-[10px] whitespace-nowrap">
-                        Edited {task.editCount}×
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {task.lastEditedAt
-                          ? `Last ${formatTimestamp(task.lastEditedAt)}${task.lastEditedByName ? ` by ${task.lastEditedByName}` : ''}`
-                          : 'Edited'}
-                      </TooltipContent>
-                    </Tooltip>
+                    <span
+                      className="border-rule text-ink-muted ml-1.5 rounded-sm border px-1 text-micro"
+                      title={
+                        task.lastEditedAt
+                          ? `Last edited ${formatTimestamp(task.lastEditedAt)}${task.lastEditedByName ? ` by ${task.lastEditedByName}` : ''}`
+                          : undefined
+                      }
+                    >
+                      edited {task.editCount}×
+                    </span>
                   )}
-                </TableCell>
-              </TableRow>
+                </Td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
 
       {data && data.pageCount > 1 && (
         <div className="flex items-center justify-between">
-          <span className="text-muted-foreground text-sm">
+          <span className="text-ink-muted text-dense">
             Page {data.page} of {data.pageCount}
           </span>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
+            <PageButton
               disabled={data.page <= 1}
               onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))}
             >
               Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
+            </PageButton>
+            <PageButton
               disabled={data.page >= data.pageCount}
               onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))}
             >
               Next
-            </Button>
+            </PageButton>
           </div>
         </div>
       )}
@@ -318,11 +194,64 @@ export function LedgerTable() {
   )
 }
 
-function Filter({ label, children }: { label: string; children: React.ReactNode }) {
+function Th({
+  children,
+  align = 'left',
+}: {
+  children?: React.ReactNode
+  align?: 'left' | 'right'
+}) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-muted-foreground text-xs">{label}</Label>
+    <th
+      scope="col"
+      className={cn(
+        'text-ink-muted px-2 pb-2 text-micro font-medium whitespace-nowrap',
+        align === 'right' ? 'text-right' : 'text-left',
+      )}
+    >
       {children}
-    </div>
+    </th>
+  )
+}
+
+function Td({
+  children,
+  className,
+  align = 'left',
+  title,
+}: {
+  children?: React.ReactNode
+  className?: string
+  align?: 'left' | 'right'
+  title?: string
+}) {
+  return (
+    <td
+      title={title}
+      className={cn('px-2 py-2.5', align === 'right' && 'text-right', className)}
+    >
+      {children}
+    </td>
+  )
+}
+
+function PageButton({
+  children,
+  disabled,
+  onClick,
+}: {
+  children: React.ReactNode
+  disabled?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="border-control text-dense text-ink-muted hover:text-ink hover:bg-wash rounded-md border px-3 py-1.5 transition-colors duration-[120ms] disabled:opacity-40 disabled:hover:bg-transparent"
+    >
+      {children}
+    </button>
   )
 }

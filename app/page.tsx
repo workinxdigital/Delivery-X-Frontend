@@ -4,8 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { getHealth } from '@/lib/api/client'
 
 /**
- * Step 0.1 status page. Its only job is to prove this app can reach the API
- * across origins with credentials. Replaced by real screens from Phase 1 on.
+ * Build status. A holding screen, not a dashboard: the real owner dashboard is
+ * Phase 4. It exists so anyone opening the app can see what is wired up.
  */
 export default function Page() {
   const { data, error, isLoading } = useQuery({
@@ -14,73 +14,74 @@ export default function Page() {
     refetchInterval: 30_000,
   })
 
+  const db = data?.database
+
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-muted)]">
-        WorkinX Digital
-      </p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">DeliverX</h1>
-      <p className="mt-2 text-sm text-[var(--color-muted)]">
-        Delivery log. Phase 0 — foundations. Screens begin in Phase 1.
-      </p>
+    <div className="max-w-[40rem]">
+      <div className="border-rule mb-6 border-b pb-5">
+        <h1 className="text-[1.375rem] font-semibold tracking-tight">Status</h1>
+        <p className="text-ink-muted mt-1 text-dense">
+          Phase 2 of 5. The owner dashboard arrives in Phase 4.
+        </p>
+      </div>
 
-      <dl className="mt-10 divide-y divide-gray-200 border-y border-gray-200 text-sm">
-        <Row label="Web app">
-          <Ok>running</Ok>
+      <dl className="divide-rule divide-y">
+        <Row label="Web app" state="ok">
+          running
         </Row>
 
-        <Row label="API connection">
-          {isLoading && <span className="text-[var(--color-muted)]">checking…</span>}
-          {error && <Bad>unreachable — {(error as Error).message}</Bad>}
-          {data && <Ok>{data.service} · responded {data.time}</Ok>}
+        <Row
+          label="API"
+          state={isLoading ? 'idle' : error ? 'bad' : 'ok'}
+        >
+          {isLoading && 'checking'}
+          {error && `unreachable. ${(error as Error).message}`}
+          {data && `${data.service}, last replied ${data.time.slice(11, 19)} UTC`}
         </Row>
 
-        <Row label="API domain layer">
-          {data ? (
-            <Ok>
-              resolved — sample <strong>{data.domain.sample}</strong>
-            </Ok>
-          ) : (
-            <span className="text-[var(--color-muted)]">—</span>
-          )}
+        <Row
+          label="Database"
+          state={!db ? 'idle' : db.status === 'connected' ? 'ok' : 'bad'}
+        >
+          {!db && '—'}
+          {db?.status === 'unreachable' && `unreachable. ${db.error}`}
+          {db?.status === 'connected' &&
+            `${db.tables} tables, ${db.services} services, ${db.agencies} agencies, ${db.tasks} logged`}
         </Row>
 
-        <Row label="Database">
-          {!data?.database && <span className="text-[var(--color-muted)]">—</span>}
-          {data?.database?.status === 'unreachable' && <Bad>unreachable — {data.database.error}</Bad>}
-          {data?.database?.status === 'connected' && (
-            <Ok>
-              connected — {data.database.tables} tables, {data.database.services} services,{' '}
-              {data.database.agencies} agencies, {data.database.tasks} tasks
-            </Ok>
-          )}
-        </Row>
-
-        <Row label="Login">
-          <span className="text-[var(--color-muted)]">not built yet — step 0.4</span>
+        <Row label="Sign-in" state="idle">
+          not built yet, step 0.4
         </Row>
       </dl>
 
-      <p className="mt-10 text-xs text-[var(--color-muted)]">
-        This system contains no pricing of any kind. Commercial terms are handled outside it.
+      <p className="text-ink-faint mt-8 text-micro">
+        This system holds no pricing of any kind. Commercial terms are handled outside it.
       </p>
-    </main>
-  )
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-6 py-3">
-      <dt className="shrink-0 font-medium">{label}</dt>
-      <dd className="text-right">{children}</dd>
     </div>
   )
 }
 
-const Ok = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-emerald-700">{children}</span>
-)
-
-const Bad = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-red-700">{children}</span>
-)
+function Row({
+  label,
+  state,
+  children,
+}: {
+  label: string
+  state: 'ok' | 'bad' | 'idle'
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-6 py-3">
+      <dt className="text-dense shrink-0 font-medium">{label}</dt>
+      <dd
+        className={
+          // Failure is the only state that earns the accent. "Working" is the
+          // normal case and gets no colour (DESIGN.md).
+          state === 'bad' ? 'text-beyond text-dense text-right' : 'text-ink-muted text-dense text-right'
+        }
+      >
+        {children}
+      </dd>
+    </div>
+  )
+}

@@ -101,20 +101,20 @@ export function BrandInput({
       />
 
       {isNew && !showList && (
-        <p className="text-muted-foreground mt-1 text-xs">
-          New brand — will be created on save.
+        <p className="text-ink-muted mt-1.5 text-micro">
+          New brand. It will be created when you save.
         </p>
       )}
 
       {showList && (
-        <ul className="bg-popover text-popover-foreground absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border p-1 shadow-md">
+        <ul className="bg-surface border-control absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border p-1 shadow-[0_8px_24px_-8px_oklch(0.22_0.012_60_/_18%)]">
           {suggestions.map((b, i) => (
             <li key={b.id}>
               <button
                 type="button"
                 className={cn(
-                  'w-full rounded-sm px-2 py-1.5 text-left text-sm',
-                  i === highlight ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50',
+                  'text-dense w-full rounded-sm px-2 py-1.5 text-left',
+                  i === highlight ? 'bg-wash' : 'hover:bg-wash',
                 )}
                 onMouseEnter={() => setHighlight(i)}
                 onClick={() => commit(b.name)}

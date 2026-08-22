@@ -1,10 +1,11 @@
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 
-function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+/** Loading is a skeleton in place, never a centred spinner (DESIGN.md). */
+function Skeleton({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="skeleton"
-      className={cn("animate-pulse rounded-md bg-muted", className)}
+      className={cn('bg-wash animate-pulse rounded-sm', className)}
       {...props}
     />
   )
