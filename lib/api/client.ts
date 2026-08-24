@@ -30,7 +30,28 @@ import type {
   User,
 } from './types'
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'
+/**
+ * Where the API lives.
+ *
+ * NEXT_PUBLIC_* is inlined at build time, so an unset variable does not fail at
+ * runtime — it silently bakes in localhost:4000, which means the visitor's own
+ * machine. That ships an app that works only for whoever built it, and looks
+ * like a broken backend to everyone else.
+ *
+ * So a production build without it fails loudly here instead. Development keeps
+ * the localhost default, since that is genuinely where the API is.
+ */
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL
+
+if (!configuredApiUrl && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'NEXT_PUBLIC_API_URL is not set. A production build needs it, or the app ' +
+      'would call http://localhost:4000 from every visitor\'s browser. Set it to ' +
+      'the API origin plus /api/v1, e.g. https://deliverx.example.com/api/v1',
+  )
+}
+
+const BASE_URL = configuredApiUrl ?? 'http://localhost:4000/api/v1'
 
 export type ValidationIssue = { path: string; message: string }
 
