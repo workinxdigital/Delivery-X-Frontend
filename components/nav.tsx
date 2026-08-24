@@ -93,17 +93,26 @@ export function Nav() {
         <div className="ml-auto flex items-center gap-3 py-3">
           {user ? (
             <>
-              {/* Your own name is the way into your own account. */}
+              {/*
+                One capsule, not a name with the role stacked underneath it.
+                The two were usually saying the same thing twice — the admin
+                account is called "Admin", so the header read "Admin / ADMIN" —
+                and a two-line block sat awkwardly beside single-line nav items.
+
+                The name is what identifies you and is what stays; the role is
+                on the account page this links to, and in the tooltip here.
+              */}
               <Link
                 href="/account"
+                title={`Signed in as ${user.name} · ${user.role.toLowerCase()}`}
                 className={cn(
-                  'hidden rounded-md px-2 py-1 text-right leading-tight transition-colors duration-[120ms] sm:block',
-                  pathname.startsWith('/account') ? 'bg-wash' : 'hover:bg-wash',
+                  'hidden items-center rounded-full px-3 py-1 text-dense whitespace-nowrap transition-colors duration-[120ms] sm:inline-flex',
+                  pathname.startsWith('/account')
+                    ? 'bg-ink text-paper'
+                    : 'bg-wash text-ink-muted hover:text-ink',
                 )}
               >
-                <span className="text-ink block text-dense">{user.name}</span>
-                {/* The role decides what is reachable, so it is worth stating. */}
-                <span className="eyebrow text-ink-muted block">{user.role}</span>
+                {user.name}
               </Link>
               <button
                 type="button"
