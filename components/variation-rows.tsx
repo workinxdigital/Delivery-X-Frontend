@@ -65,17 +65,35 @@ export function VariationRows({
 
   return (
     <div className="space-y-3">
+      {/*
+        Column labels, once per service section rather than repeated on every
+        row. Without them the segmented control and the number box are just
+        shapes: you cannot tell what the number counts.
+      */}
+      <div className="hidden gap-3 sm:grid sm:grid-cols-[2.5rem_1fr_5.5rem_1.75rem]">
+        <span />
+        <span className="text-ink-muted text-micro font-medium">Complexity</span>
+        <span className="text-ink-muted text-micro font-medium">Revisions</span>
+        <span />
+      </div>
+
       <div className="space-y-2">
         {variations.map((variation, i) => (
           <div
             key={i}
             className="grid items-start gap-3 sm:grid-cols-[2.5rem_1fr_5.5rem_1.75rem]"
           >
-            <span className="text-ink-muted pt-2.5 text-dense whitespace-nowrap">
+            <span
+              className="text-ink-muted pt-2.5 text-dense whitespace-nowrap"
+              title={`Variation ${i + 1}`}
+            >
               #{i + 1}
             </span>
 
             <div className="space-y-1">
+              <span className="text-ink-muted text-micro font-medium sm:hidden">
+                Complexity
+              </span>
               <Segmented
                 name={`Complexity for variation ${i + 1}`}
                 options={COMPLEXITIES}
@@ -91,6 +109,9 @@ export function VariationRows({
             </div>
 
             <div className="space-y-1">
+              <span className="text-ink-muted text-micro font-medium sm:hidden">
+                Revisions
+              </span>
               <Input
                 type="number"
                 min={0}

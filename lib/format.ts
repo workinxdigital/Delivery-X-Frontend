@@ -80,3 +80,28 @@ export function summarizeComplexities(list: (keyof typeof COMPLEXITY_LABELS)[]):
     detail: present.map((c) => `${counts.get(c)} × ${COMPLEXITY_LABELS[c]}`).join(', '),
   }
 }
+
+/**
+ * Turn a service category into something readable.
+ *
+ * Categories are free text in the catalogue so admins can add one without a
+ * deploy (CLAUDE.md §4.4), which means they arrive as raw values like A_PLUS.
+ * The transform is generic — underscores to spaces, title case — so a category
+ * invented next quarter reads correctly with no code change. The override map
+ * only covers the handful the generic rule would mangle.
+ */
+const CATEGORY_OVERRIDES: Record<string, string> = {
+  A_PLUS: 'A+ content',
+}
+
+export function formatCategory(raw: string): string {
+  const override = CATEGORY_OVERRIDES[raw]
+  if (override) return override
+
+  return raw
+    .toLowerCase()
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((word, i) => (i === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word))
+    .join(' ')
+}

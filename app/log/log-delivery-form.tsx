@@ -22,7 +22,7 @@ import {
   getUsers,
 } from '@/lib/api/client'
 import type { Complexity } from '@/lib/api/types'
-import { todayInIST } from '@/lib/format'
+import { todayInIST, formatCategory } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 /** Above this we warn but still allow — a genuine bulk delivery is possible. */
@@ -60,7 +60,11 @@ export function LogDeliveryForm() {
   const firstFieldRef = useRef<HTMLButtonElement>(null)
 
   const { data: agencies = [] } = useQuery({ queryKey: ['agencies'], queryFn: getAgencies })
-  const { data: services = [] } = useQuery({ queryKey: ['services'], queryFn: getServices })
+  // Active only: a retired service should not be offered for a new delivery.
+  const { data: services = [] } = useQuery({
+    queryKey: ['services'],
+    queryFn: () => getServices(),
+  })
   const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: getUsers })
 
   // Auth is deferred, so "delivered by" cannot default to the signed-in user.
@@ -86,7 +90,7 @@ export function LogDeliveryForm() {
   const serviceOptions: MultiOption[] = services.map((s) => ({
     value: s.id,
     label: s.name,
-    group: s.isBundle ? 'Bundles' : s.category,
+    group: s.isBundle ? 'Bundles' : formatCategory(s.category),
     // Bundle contents shown inline, as §5.1 requires.
     hint: s.isBundle ? s.components.map((c) => c.name).join(' + ') : undefined,
     keywords: s.code,

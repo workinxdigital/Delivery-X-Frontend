@@ -20,6 +20,7 @@ export type Service = {
   name: string
   category: string
   isBundle: boolean
+  active: boolean
   sortOrder: number
   /** Populated for bundles so the form can show contents inline (§5.1). */
   components: { id: string; name: string }[]

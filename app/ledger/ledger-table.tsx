@@ -41,7 +41,11 @@ export function LedgerTable() {
   })
 
   const { data: agencies = [] } = useQuery({ queryKey: ['agencies'], queryFn: getAgencies })
-  const { data: services = [] } = useQuery({ queryKey: ['services'], queryFn: getServices })
+  // Retired services included, so historical rows stay filterable.
+  const { data: services = [] } = useQuery({
+    queryKey: ['services', 'all'],
+    queryFn: () => getServices(true),
+  })
   const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: getUsers })
 
   const { data, isLoading, isError, error } = useQuery({

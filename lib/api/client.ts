@@ -78,8 +78,15 @@ function qs(params: Record<string, unknown>): string {
 export const getAgencies = () =>
   apiFetch<{ agencies: Agency[] }>('/agencies').then((r) => r.agencies)
 
-export const getServices = () =>
-  apiFetch<{ services: Service[] }>('/services').then((r) => r.services)
+/**
+ * Active services, which is what the logging form should offer.
+ * Pass true for filter dropdowns: a retired service still needs to be selectable
+ * to find the deliveries logged against it before it was retired.
+ */
+export const getServices = (includeInactive = false) =>
+  apiFetch<{ services: Service[] }>(
+    `/services${includeInactive ? '?includeInactive=true' : ''}`,
+  ).then((r) => r.services)
 
 export const getUsers = () => apiFetch<{ users: User[] }>('/users').then((r) => r.users)
 

@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { Combobox, type ComboboxOption } from '@/components/combobox'
 import { Input } from '@/components/ui/input'
 import type { Complexity, TaskFilters, TaskStatus } from '@/lib/api/types'
-import { COMPLEXITY_LABELS, STATUS_LABELS, formatDateOnly } from '@/lib/format'
+import { COMPLEXITY_LABELS, STATUS_LABELS, formatDateOnly, formatCategory } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 const COMPLEXITY_OPTIONS: ComboboxOption[] = (
@@ -105,7 +105,7 @@ export function FilterBar({
             options={services.map((s) => ({
               value: s.id,
               label: s.name,
-              group: s.isBundle ? 'Bundles' : s.category,
+              group: s.isBundle ? 'Bundles' : formatCategory(s.category),
             }))}
             value={filters.serviceId ?? ''}
             onChange={(v) => onChange('serviceId', v)}
