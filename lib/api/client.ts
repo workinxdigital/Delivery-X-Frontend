@@ -1,11 +1,10 @@
 /**
  * Typed client for the DeliverX API.
  *
- * Every request sends credentials, because auth will be a session cookie
- * rather than a bearer token and the browser must be told to include it on a
- * cross-origin request. Errors are unwrapped from the API's envelope so
- * callers get a real Error, and field-level validation issues survive so the
- * form can show them inline.
+ * Every request sends credentials, because auth is a session cookie rather than
+ * a bearer token. Errors are unwrapped from the API's envelope so callers get a
+ * real Error, and field-level validation issues survive so the form can show
+ * them inline.
  */
 import type {
   AddRevisionRoundPayload,
@@ -31,27 +30,20 @@ import type {
 } from './types'
 
 /**
- * Where the API lives.
+ * The API is reached through this app's own origin.
  *
- * NEXT_PUBLIC_* is inlined at build time, so an unset variable does not fail at
- * runtime — it silently bakes in localhost:4000, which means the visitor's own
- * machine. That ships an app that works only for whoever built it, and looks
- * like a broken backend to everyone else.
+ * Not the API's hostname: the two deployments are separate sites, so calling it
+ * directly made the session cookie a third-party cookie, which Safari blocks
+ * outright and Chrome restricts. The app worked in whichever browser it was set
+ * up in and showed blank screens on other devices, because those requests
+ * arrived with no session attached.
  *
- * So a production build without it fails loudly here instead. Development keeps
- * the localhost default, since that is genuinely where the API is.
+ * next.config.ts proxies /api/v1/* to the real API, so every request here is
+ * same-origin: the cookie is first-party, there is no preflight, and the
+ * API's address stays a server-side detail rather than something baked into the
+ * JavaScript every visitor downloads.
  */
-const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL
-
-if (!configuredApiUrl && process.env.NODE_ENV === 'production') {
-  throw new Error(
-    'NEXT_PUBLIC_API_URL is not set. A production build needs it, or the app ' +
-      'would call http://localhost:4000 from every visitor\'s browser. Set it to ' +
-      'the API origin plus /api/v1, e.g. https://deliverx.example.com/api/v1',
-  )
-}
-
-const BASE_URL = configuredApiUrl ?? 'http://localhost:4000/api/v1'
+const BASE_URL = '/api/v1'
 
 export type ValidationIssue = { path: string; message: string }
 
