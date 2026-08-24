@@ -37,6 +37,7 @@ export function Combobox({
   id,
   invalid,
   clearable = true,
+  triggerRef: externalTriggerRef,
 }: {
   options: ComboboxOption[]
   value: string
@@ -48,13 +49,16 @@ export function Combobox({
   id?: string
   invalid?: boolean
   clearable?: boolean
+  /** Lets a form return focus here after saving. */
+  triggerRef?: React.RefObject<HTMLButtonElement | null>
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [highlight, setHighlight] = useState(0)
 
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  const ownTriggerRef = useRef<HTMLButtonElement>(null)
+  const triggerRef = externalTriggerRef ?? ownTriggerRef
   const searchRef = useRef<HTMLInputElement>(null)
 
   const selected = options.find((o) => o.value === value)

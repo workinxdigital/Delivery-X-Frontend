@@ -8,13 +8,16 @@
  * form can show them inline.
  */
 import type {
+  AddRevisionRoundPayload,
   Agency,
   Brand,
   CreateTaskPayload,
   CreateTaskResult,
   DuplicateWarning,
+  RevisionReason,
   Service,
   Task,
+  TaskDetail,
   TaskFilters,
   TaskListResult,
   User,
@@ -89,7 +92,22 @@ export const getTasks = (filters: TaskFilters) =>
   apiFetch<TaskListResult>(`/tasks${qs(filters)}`)
 
 export const getTask = (id: string) =>
-  apiFetch<{ task: Task }>(`/tasks/${id}`).then((r) => r.task)
+  apiFetch<{ task: TaskDetail }>(`/tasks/${id}`).then((r) => r.task)
+
+export const getRevisionReasons = () =>
+  apiFetch<{ reasons: RevisionReason[] }>('/revision-reasons').then((r) => r.reasons)
+
+export const addRevisionRound = (taskId: string, payload: AddRevisionRoundPayload) =>
+  apiFetch<{
+    round: { id: string; roundNumber: number; beyondAllowance: boolean }
+    revisionRoundCount: number
+    roundsBeyondAllowance: number
+    allowanceInForce: number
+    withinAllowance: number
+  }>(`/tasks/${taskId}/revision-rounds`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 
 export const createTask = (payload: CreateTaskPayload) =>
   apiFetch<CreateTaskResult>('/tasks', {

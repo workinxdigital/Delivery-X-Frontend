@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import Link from 'next/link'
 import { useState } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { exportCsvUrl, getAgencies, getServices, getTasks, getUsers } from '@/lib/api/client'
@@ -59,7 +60,7 @@ export function LedgerTable() {
               <Th>Service</Th>
               <Th>Complexity</Th>
               <Th align="right">Var.</Th>
-              <Th>Title</Th>
+              <Th>Note</Th>
               <Th align="right">Revisions</Th>
               <Th>By</Th>
             </tr>
@@ -103,7 +104,15 @@ export function LedgerTable() {
                 key={task.id}
                 className="border-rule hover:bg-wash border-b transition-colors duration-[120ms]"
               >
-                <Td className="code text-ink-muted whitespace-nowrap">{task.taskCode}</Td>
+                <Td className="whitespace-nowrap">
+                  {/* The code is the identifier, so it is also the way in. */}
+                  <Link
+                    href={`/ledger/${task.id}`}
+                    className="code text-ink-muted hover:text-ink underline decoration-dotted underline-offset-2 transition-colors duration-[120ms]"
+                  >
+                    {task.taskCode}
+                  </Link>
+                </Td>
                 <Td className="whitespace-nowrap">{formatDateOnly(task.deliveredOn)}</Td>
                 <Td className="whitespace-nowrap">
                   {task.agencyName}
@@ -122,8 +131,16 @@ export function LedgerTable() {
                 </Td>
                 <Td className="text-ink-muted">{COMPLEXITY_LABELS[task.complexity]}</Td>
                 <Td align="right">{task.variationCount}</Td>
-                <Td className="max-w-[24ch] truncate" title={task.title}>
-                  {task.title}
+                {/*
+                  Titles are optional since the form swapped that field for a
+                  revisions count, so this falls back to the note rather than
+                  leaving a column of blanks.
+                */}
+                <Td
+                  className="text-ink-muted max-w-[22ch] truncate"
+                  title={task.title ?? task.notes ?? undefined}
+                >
+                  {task.title ?? task.notes ?? <span className="text-ink-faint">—</span>}
                 </Td>
                 <Td align="right" className="whitespace-nowrap">
                   {task.revisionRoundCount === 0 ? (

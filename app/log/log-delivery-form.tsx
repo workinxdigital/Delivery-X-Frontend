@@ -36,7 +36,7 @@ type FormState = {
   serviceId: string
   complexity: Complexity | ''
   variationCount: string
-  title: string
+  revisionCount: string
   deliveredOn: string
   deliveredById: string
   clickupTaskId: string
@@ -49,7 +49,7 @@ const EMPTY: FormState = {
   serviceId: '',
   complexity: '',
   variationCount: '1',
-  title: '',
+  revisionCount: '0',
   deliveredOn: todayInIST(),
   deliveredById: '',
   clickupTaskId: '',
@@ -61,7 +61,7 @@ export function LogDeliveryForm() {
   const [form, setForm] = useState<FormState>(EMPTY)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [duplicateAck, setDuplicateAck] = useState(false)
-  const titleRef = useRef<HTMLInputElement>(null)
+  const firstFieldRef = useRef<HTMLButtonElement>(null)
 
   const { data: agencies = [] } = useQuery({ queryKey: ['agencies'], queryFn: getAgencies })
   const { data: services = [] } = useQuery({ queryKey: ['services'], queryFn: getServices })
@@ -127,8 +127,15 @@ export function LogDeliveryForm() {
   const mutation = useMutation({
     mutationFn: createTask,
     onSuccess: (result) => {
-      toast(result.task.taskCode, {
-        description: `${result.task.brandName} · ${result.task.serviceName}${result.brandCreated ? ' · new brand created' : ''}`,
+      const t = result.task
+      const rounds =
+        t.revisionRoundCount > 0
+          ? ` · ${t.revisionRoundCount} revision${t.revisionRoundCount === 1 ? '' : 's'}${
+              t.roundsBeyondAllowance > 0 ? `, ${t.roundsBeyondAllowance} beyond allowance` : ''
+            }`
+          : ''
+      toast(t.taskCode, {
+        description: `${t.brandName} · ${t.serviceName}${result.brandCreated ? ' · new brand' : ''}${rounds}`,
       })
       if (result.variationWarning) toast.warning(result.variationWarning)
 
@@ -145,7 +152,7 @@ export function LogDeliveryForm() {
       setDuplicateAck(false)
       void queryClient.invalidateQueries({ queryKey: ['tasks'] })
       void queryClient.invalidateQueries({ queryKey: ['brands'] })
-      titleRef.current?.focus()
+      firstFieldRef.current?.focus()
     },
     onError: (error) => {
       if (error instanceof ApiError && error.issues.length > 0) {
@@ -167,7 +174,8 @@ export function LogDeliveryForm() {
     if (!form.complexity) next.complexity = 'Pick a complexity'
     const variations = Number(form.variationCount)
     if (!Number.isInteger(variations) || variations < 1) next.variationCount = 'At least 1'
-    if (!form.title.trim()) next.title = 'Give the task a title'
+    const revisions = Number(form.revisionCount)
+    if (!Number.isInteger(revisions) || revisions < 0) next.revisionCount = '0 or more'
     if (!form.deliveredOn) next.deliveredOn = 'Pick a date'
     else if (form.deliveredOn > todayInIST()) next.deliveredOn = 'Cannot be in the future'
     if (!form.deliveredById) next.deliveredById = 'Pick who delivered it'
@@ -187,7 +195,7 @@ export function LogDeliveryForm() {
       serviceId: form.serviceId,
       complexity: form.complexity as Complexity,
       variationCount: Number(form.variationCount),
-      title: form.title.trim(),
+      revisionCount: Number(form.revisionCount),
       deliveredOn: form.deliveredOn,
       deliveredById: form.deliveredById,
       clickupTaskId: form.clickupTaskId.trim() || null,
@@ -196,10 +204,26 @@ export function LogDeliveryForm() {
   }
 
   const variations = Number(form.variationCount)
-  const variationHint =
-    Number.isFinite(variations) && variations > VARIATION_SOFT_LIMIT
-      ? `${variations} is unusually high. Worth a check.`
-      : undefined
+  const revisions = Number(form.revisionCount)
+
+  /**
+   * Tells the PM what the number they just typed will mean, before they save.
+   * The allowance comes from the selected agency, which is the value that gets
+   * snapshotted onto the task (§2.6).
+   */
+  const revisionHint = (() => {
+    if (!selectedAgency || !Number.isFinite(revisions) || revisions <= 0) {
+      return variations > VARIATION_SOFT_LIMIT
+        ? `${variations} variations is unusually high. Worth a check.`
+        : undefined
+    }
+    const allowance = selectedAgency.freeRevisionAllowance
+    const beyond = Math.max(0, revisions - allowance)
+    const within = revisions - beyond
+    return beyond > 0
+      ? `${within} within the allowance of ${allowance}, ${beyond} beyond it.`
+      : `All ${revisions} within the allowance of ${allowance}.`
+  })()
 
   return (
     <form
@@ -220,6 +244,7 @@ export function LogDeliveryForm() {
         <Field label="Agency or direct client" htmlFor="agency" error={errors.agencyId}>
           <Combobox
             id="agency"
+            triggerRef={firstFieldRef}
             options={agencyOptions}
             value={form.agencyId}
             invalid={Boolean(errors.agencyId)}
@@ -277,7 +302,7 @@ export function LogDeliveryForm() {
           />
         </Field>
 
-        <div className="grid gap-4 sm:grid-cols-[1fr_7rem]">
+        <div className="grid gap-4 sm:grid-cols-[1fr_6rem_6rem]">
           <Field label="Complexity" error={errors.complexity}>
             <Segmented
               name="Complexity"
@@ -292,7 +317,6 @@ export function LogDeliveryForm() {
             label="Variations"
             htmlFor="variations"
             error={errors.variationCount}
-            hint={variationHint}
           >
             <Input
               id="variations"
@@ -304,18 +328,32 @@ export function LogDeliveryForm() {
               onChange={(e) => set('variationCount', e.target.value)}
             />
           </Field>
+
+          {/*
+            Replaces the old task title field. The number typed here becomes
+            that many real revision_round records server-side, each classified
+            against this agency's allowance, so the count stays reportable
+            rather than being a second loose number on the task.
+          */}
+          <Field
+            label="Revisions"
+            htmlFor="revisions"
+            error={errors.revisionCount}
+          >
+            <Input
+              id="revisions"
+              type="number"
+              min={0}
+              step={1}
+              value={form.revisionCount}
+              aria-invalid={Boolean(errors.revisionCount)}
+              onChange={(e) => set('revisionCount', e.target.value)}
+            />
+          </Field>
         </div>
 
-        <Field label="Task title" htmlFor="title" error={errors.title}>
-          <Input
-            id="title"
-            ref={titleRef}
-            value={form.title}
-            placeholder="What was delivered"
-            aria-invalid={Boolean(errors.title)}
-            onChange={(e) => set('title', e.target.value)}
-          />
-        </Field>
+        {revisionHint && <p className="text-ink-muted text-micro">{revisionHint}</p>}
+
       </Band>
 
       <Band title="When and who" className="py-7">

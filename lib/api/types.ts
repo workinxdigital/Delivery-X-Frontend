@@ -50,7 +50,7 @@ export type Task = {
   isBundle: boolean
   complexity: Complexity
   variationCount: number
-  title: string
+  title: string | null
   status: TaskStatus
   revisionRoundCount: number
   roundsBeyondAllowance: number
@@ -70,13 +70,43 @@ export type Task = {
   createdAt: string
 }
 
+export type RevisionReason = { id: string; code: string; label: string }
+
+export type RevisionRound = {
+  id: string
+  roundNumber: number
+  requestedOn: string
+  completedOn: string | null
+  /** Derived server-side from the allowance snapshotted on the task (§2.6). */
+  beyondAllowance: boolean
+  reason: string
+  notes: string | null
+  loggedByName: string
+}
+
+export type TaskDetail = Task & { revisionRounds: RevisionRound[] }
+
+export type AddRevisionRoundPayload = {
+  reasonId: string
+  requestedOn: string
+  completedOn?: string | null
+  notes?: string | null
+}
+
 export type CreateTaskPayload = {
   agencyId: string
   brandName: string
   serviceId: string
   complexity: Complexity
   variationCount: number
-  title: string
+  /**
+   * How many revision rounds this delivery had. The server turns this into that
+   * many real revision_round records, each classified against the agency's
+   * snapshotted allowance, so one typed number stays fully reportable.
+   */
+  revisionCount: number
+  /** Optional: the logging form replaced this field with the revisions count. */
+  title?: string | null
   deliveredOn: string
   deliveredById: string
   clickupTaskId?: string | null
@@ -101,7 +131,7 @@ export type TaskListResult = {
 export type DuplicateWarning = {
   id: string
   taskCode: string
-  title: string
+  title: string | null
   createdAt: string
 } | null
 
