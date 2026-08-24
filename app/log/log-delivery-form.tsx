@@ -33,7 +33,6 @@ type FormState = {
   asins: AsinDraft[]
   deliveredOn: string
   deliveredById: string
-  clickupTaskId: string
   notes: string
 }
 
@@ -43,7 +42,6 @@ const EMPTY: FormState = {
   asins: [emptyAsin()],
   deliveredOn: todayInIST(),
   deliveredById: '',
-  clickupTaskId: '',
   notes: '',
 }
 
@@ -227,6 +225,7 @@ export function LogDeliveryForm() {
       brandName: form.brandName.trim(),
       asins: form.asins.map((asin) => ({
         code: asin.code.trim() || null,
+        clickupTaskId: asin.clickupTaskId.trim() || null,
         lines: asin.serviceIds.map((serviceId) => ({
           serviceId,
           variations: (asin.variationsByService[serviceId] ?? []).map((v) => ({
@@ -237,7 +236,6 @@ export function LogDeliveryForm() {
       })),
       deliveredOn: form.deliveredOn,
       deliveredById: form.deliveredById,
-      clickupTaskId: form.clickupTaskId.trim() || null,
       notes: form.notes.trim() || null,
     })
   }
@@ -404,25 +402,14 @@ export function LogDeliveryForm() {
           </Field>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="ClickUp task" htmlFor="clickup" optional>
-            <Input
-              id="clickup"
-              value={form.clickupTaskId}
-              placeholder="ID or URL"
-              onChange={(e) => set('clickupTaskId', e.target.value)}
-            />
-          </Field>
-
-          <Field label="Notes" htmlFor="notes" optional>
-            <Input
-              id="notes"
-              value={form.notes}
-              placeholder="Anything worth recording"
-              onChange={(e) => set('notes', e.target.value)}
-            />
-          </Field>
-        </div>
+        <Field label="Notes" htmlFor="notes" optional>
+          <Input
+            id="notes"
+            value={form.notes}
+            placeholder="Anything worth recording about this delivery"
+            onChange={(e) => set('notes', e.target.value)}
+          />
+        </Field>
       </Band>
 
       {/*

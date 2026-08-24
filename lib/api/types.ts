@@ -148,6 +148,8 @@ export type DeliveryLinePayload = {
 export type AsinPayload = {
   /** Optional: a delivery with no code simply has no ASIN attached. */
   code?: string | null
+  /** The ClickUp task for this listing — one job is one ClickUp task per ASIN. */
+  clickupTaskId?: string | null
   lines: DeliveryLinePayload[]
 }
 

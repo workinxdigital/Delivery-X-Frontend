@@ -3,6 +3,7 @@
 import { AsinInput } from '@/components/asin-input'
 import { Field } from '@/components/field'
 import { MultiSelect, type MultiOption } from '@/components/multi-select'
+import { Input } from '@/components/ui/input'
 import { VariationRows, emptyVariation, type VariationDraft } from '@/components/variation-rows'
 import type { Service } from '@/lib/api/types'
 import { formatCategory } from '@/lib/format'
@@ -13,6 +14,8 @@ export type AsinDraft = {
   key: string
   /** Optional: a PM without the code to hand still needs to log the work. */
   code: string
+  /** The ClickUp task for this listing, since a job is one task per ASIN. */
+  clickupTaskId: string
   serviceIds: string[]
   /** Keyed by serviceId so deselecting and reselecting keeps the work. */
   variationsByService: Record<string, VariationDraft[]>
@@ -21,7 +24,13 @@ export type AsinDraft = {
 let seq = 0
 export function emptyAsin(): AsinDraft {
   seq += 1
-  return { key: `asin-${seq}`, code: '', serviceIds: [], variationsByService: {} }
+  return {
+    key: `asin-${seq}`,
+    code: '',
+    clickupTaskId: '',
+    serviceIds: [],
+    variationsByService: {},
+  }
 }
 
 /**
@@ -62,8 +71,8 @@ export function AsinSection({
 }) {
   return (
     <div className="border-rule rounded-lg border p-4">
-      <div className="mb-3 flex items-start justify-between gap-4">
-        <div className="grow">
+      <div className="mb-3 flex items-start gap-4">
+        <div className="grid grow gap-4 sm:grid-cols-2">
           <Field
             label={`ASIN ${index + 1}`}
             htmlFor={`asin-${value.key}`}
@@ -76,6 +85,17 @@ export function AsinSection({
               value={value.code}
               onChange={(code) => onChange({ ...value, code })}
               invalid={Boolean(errors.code)}
+            />
+          </Field>
+
+          {/* Paired with the code, because they identify the same thing from
+              two directions: the listing, and the task that delivered it. */}
+          <Field label="ClickUp task" htmlFor={`clickup-${value.key}`} optional>
+            <Input
+              id={`clickup-${value.key}`}
+              value={value.clickupTaskId}
+              placeholder="ID or URL"
+              onChange={(e) => onChange({ ...value, clickupTaskId: e.target.value })}
             />
           </Field>
         </div>
