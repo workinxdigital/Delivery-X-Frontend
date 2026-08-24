@@ -235,3 +235,44 @@ export type HistoryEntry = {
   before: Record<string, unknown> | null
   after: Record<string, unknown> | null
 }
+
+// ---------------------------------------------------------------- auth
+
+export type Role = 'OWNER' | 'ADMIN' | 'PM' | 'VIEWER'
+
+export type SessionUser = { id: string; name: string; email: string; role: Role }
+
+/** Admin views carry usage counts, so master data is never deleted blind. */
+export type AdminAgency = {
+  id: string
+  name: string
+  type: 'AGENCY' | 'DIRECT'
+  contactName: string | null
+  contactEmail: string | null
+  freeRevisionAllowance: number
+  status: 'ACTIVE' | 'INACTIVE'
+  notes: string | null
+  taskCount: number
+  brandCount: number
+}
+
+export type AdminService = {
+  id: string
+  code: string
+  name: string
+  category: string
+  isBundle: boolean
+  active: boolean
+  sortOrder: number
+  notes: string | null
+  taskCount: number
+}
+
+export type AdminUser = {
+  id: string
+  name: string
+  email: string
+  role: Role
+  active: boolean
+  loggedCount: number
+}

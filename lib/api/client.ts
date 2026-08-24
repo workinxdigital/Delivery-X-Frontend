@@ -19,6 +19,10 @@ import type {
   Task,
   TaskDetail,
   TaskFilters,
+  AdminAgency,
+  AdminService,
+  AdminUser,
+  SessionUser,
   TaskListResult,
   UpdateTaskPayload,
   UpdateTaskResult,
@@ -172,3 +176,81 @@ export type HealthResponse = {
 }
 
 export const getHealth = () => apiFetch<HealthResponse>('/health')
+
+// ---------------------------------------------------------------- auth
+
+export const loginRequest = (email: string, password: string) =>
+  apiFetch<{ user: SessionUser }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  }).then((r) => r.user)
+
+export const logoutRequest = () => apiFetch<{ ok: true }>('/auth/logout', { method: 'POST' })
+
+/** Throws ApiError with status 401 when there is no session. */
+export const getMe = () => apiFetch<{ user: SessionUser }>('/auth/me').then((r) => r.user)
+
+// ---------------------------------------------------------------- admin
+
+export const getAdminAgencies = () =>
+  apiFetch<{ agencies: AdminAgency[] }>('/admin/agencies').then((r) => r.agencies)
+
+export const createAgency = (payload: Partial<AdminAgency>) =>
+  apiFetch<{ agency: AdminAgency }>('/admin/agencies', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+export const updateAgency = (id: string, payload: Partial<AdminAgency>) =>
+  apiFetch<{ agency: AdminAgency }>(`/admin/agencies/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+
+export const deleteAgency = (id: string) =>
+  apiFetch<{ removed: { id: string; name: string } }>(`/admin/agencies/${id}`, {
+    method: 'DELETE',
+  })
+
+export const getAdminServices = () =>
+  apiFetch<{ services: AdminService[] }>('/admin/services').then((r) => r.services)
+
+export const createService = (payload: Partial<AdminService>) =>
+  apiFetch<{ service: AdminService }>('/admin/services', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+export const updateService = (id: string, payload: Partial<AdminService>) =>
+  apiFetch<{ service: AdminService }>(`/admin/services/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+
+export const deleteService = (id: string) =>
+  apiFetch<{ removed: { id: string; name: string } }>(`/admin/services/${id}`, {
+    method: 'DELETE',
+  })
+
+export const getAdminUsers = () =>
+  apiFetch<{ users: AdminUser[] }>('/admin/users').then((r) => r.users)
+
+export const createUser = (payload: {
+  name: string
+  email: string
+  role: string
+  password: string
+}) =>
+  apiFetch<{ user: AdminUser }>('/admin/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+export const updateUser = (
+  id: string,
+  payload: { name?: string; email?: string; role?: string; active?: boolean; password?: string },
+) =>
+  apiFetch<{ user: AdminUser }>(`/admin/users/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })

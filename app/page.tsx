@@ -49,8 +49,8 @@ export default function Page() {
             `${db.tables} tables, ${db.services} services, ${db.agencies} agencies, ${db.tasks} logged`}
         </Row>
 
-        <Row label="Sign-in" state="idle">
-          not built yet, step 0.4
+        <Row label="Sign-in" state="ok">
+          email and password, session cookie, role-based access
         </Row>
       </dl>
 
