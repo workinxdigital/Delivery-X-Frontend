@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { BrandInput } from '@/components/brand-input'
 import { Combobox, type ComboboxOption } from '@/components/combobox'
+import { DelivererInput } from '@/components/deliverer-input'
 import type { MultiOption } from '@/components/multi-select'
 import { AsinSection, emptyAsin, type AsinDraft } from '@/components/asin-section'
 import { Band, Field } from '@/components/field'
@@ -16,7 +17,6 @@ import {
   getAgencies,
   getBrands,
   getServices,
-  getUsers,
 } from '@/lib/api/client'
 import type { Complexity } from '@/lib/api/types'
 import { todayInIST, formatCategory } from '@/lib/format'
@@ -32,7 +32,7 @@ type FormState = {
    */
   asins: AsinDraft[]
   deliveredOn: string
-  deliveredById: string
+  deliveredByName: string
   notes: string
 }
 
@@ -41,7 +41,7 @@ const EMPTY: FormState = {
   brandName: '',
   asins: [emptyAsin()],
   deliveredOn: todayInIST(),
-  deliveredById: '',
+  deliveredByName: '',
   notes: '',
 }
 
@@ -58,15 +58,6 @@ export function LogDeliveryForm() {
     queryKey: ['services'],
     queryFn: () => getServices(),
   })
-  const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: getUsers })
-
-  // Auth is deferred, so "delivered by" cannot default to the signed-in user.
-  // Default to a PM instead, and say so in the field's helper line.
-  useEffect(() => {
-    if (form.deliveredById || users.length === 0) return
-    const fallback = users.find((u) => u.role === 'PM') ?? users[0]
-    if (fallback) setForm((f) => ({ ...f, deliveredById: fallback.id }))
-  }, [users, form.deliveredById])
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((f) => ({ ...f, [key]: value }))
@@ -87,12 +78,6 @@ export function LogDeliveryForm() {
     // Bundle contents shown inline, as §5.1 requires.
     hint: s.isBundle ? s.components.map((c) => c.name).join(' + ') : undefined,
     keywords: s.code,
-  }))
-
-  const userOptions: ComboboxOption[] = users.map((u) => ({
-    value: u.id,
-    label: u.name,
-    hint: u.role,
   }))
 
   const selectedAgency = agencies.find((a) => a.id === form.agencyId)
@@ -166,7 +151,7 @@ export function LogDeliveryForm() {
         ...EMPTY,
         agencyId: f.agencyId,
         brandName: f.brandName,
-        deliveredById: f.deliveredById,
+        deliveredByName: f.deliveredByName,
         deliveredOn: f.deliveredOn,
       }))
       setErrors({})
@@ -209,7 +194,7 @@ export function LogDeliveryForm() {
     })
     if (!form.deliveredOn) next.deliveredOn = 'Pick a date'
     else if (form.deliveredOn > todayInIST()) next.deliveredOn = 'Cannot be in the future'
-    if (!form.deliveredById) next.deliveredById = 'Pick who delivered it'
+    if (!form.deliveredByName.trim()) next.deliveredByName = 'Enter who delivered it'
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -235,7 +220,7 @@ export function LogDeliveryForm() {
         })),
       })),
       deliveredOn: form.deliveredOn,
-      deliveredById: form.deliveredById,
+      deliveredByName: form.deliveredByName.trim(),
       notes: form.notes.trim() || null,
     })
   }
@@ -386,18 +371,14 @@ export function LogDeliveryForm() {
           <Field
             label="Delivered by"
             htmlFor="deliveredBy"
-            error={errors.deliveredById}
-            hint="Defaults to a PM until sign-in exists."
+            error={errors.deliveredByName}
+            hint="Type a name that is not listed to add them to the team."
           >
-            <Combobox
+            <DelivererInput
               id="deliveredBy"
-              options={userOptions}
-              value={form.deliveredById}
-              invalid={Boolean(errors.deliveredById)}
-              placeholder="Select"
-              searchPlaceholder="Search people"
-              clearable={false}
-              onChange={(v) => set('deliveredById', v)}
+              value={form.deliveredByName}
+              invalid={Boolean(errors.deliveredByName)}
+              onChange={(v) => set('deliveredByName', v)}
             />
           </Field>
         </div>

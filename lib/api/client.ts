@@ -113,6 +113,12 @@ export const getUsers = () => apiFetch<{ users: User[] }>('/users').then((r) => 
 export const getBrands = (agencyId: string, q?: string) =>
   apiFetch<{ brands: Brand[] }>(`/brands${qs({ agencyId, q })}`).then((r) => r.brands)
 
+/** The team, for the "delivered by" field. Anyone typed there joins this list. */
+export const getDeliverers = () =>
+  apiFetch<{ deliverers: { id: string; name: string; taskCount: number }[] }>(
+    '/deliverers',
+  ).then((r) => r.deliverers)
+
 /** ASINs already used for a brand, for the logging form's autocomplete. */
 export const getAsins = (brandId: string, q?: string) =>
   apiFetch<{ asins: { id: string; code: string; taskCount: number }[] }>(

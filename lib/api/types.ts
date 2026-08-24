@@ -167,7 +167,10 @@ export type CreateTaskPayload = {
   lines?: DeliveryLinePayload[]
   title?: string | null
   deliveredOn: string
-  deliveredById: string
+  /** Who delivered it, by name. Created on save if this person is new. */
+  deliveredByName?: string
+  /** Older shape: a login account's id. One of the two is required. */
+  deliveredById?: string
   clickupTaskId?: string | null
   notes?: string | null
 }
