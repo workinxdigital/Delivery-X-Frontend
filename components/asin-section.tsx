@@ -1,11 +1,9 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { AsinInput } from '@/components/asin-input'
 import { Field } from '@/components/field'
 import { MultiSelect, type MultiOption } from '@/components/multi-select'
-import { Input } from '@/components/ui/input'
 import { VariationRows, emptyVariation, type VariationDraft } from '@/components/variation-rows'
-import { getAsins } from '@/lib/api/client'
 import type { Service } from '@/lib/api/types'
 import { formatCategory } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -62,16 +60,6 @@ export function AsinSection({
   onRemove: () => void
   removable: boolean
 }) {
-  // Codes already used for this brand. Only possible once the brand exists; a
-  // brand being typed for the first time has none, which is correct.
-  const { data: known = [] } = useQuery({
-    queryKey: ['asins', brandId],
-    queryFn: () => getAsins(brandId!),
-    enabled: Boolean(brandId),
-  })
-
-  const listId = `asin-codes-${value.key}`
-
   return (
     <div className="border-rule rounded-lg border p-4">
       <div className="mb-3 flex items-start justify-between gap-4">
@@ -81,33 +69,14 @@ export function AsinSection({
             htmlFor={`asin-${value.key}`}
             optional
             error={errors.code}
-            hint={
-              known.length > 0
-                ? `${known.length} code${known.length === 1 ? '' : 's'} used before for this brand.`
-                : undefined
-            }
           >
-            <Input
+            <AsinInput
               id={`asin-${value.key}`}
-              list={known.length > 0 ? listId : undefined}
+              brandId={brandId}
               value={value.code}
-              placeholder="B0…"
-              // Uppercased on the way in, since that is how Amazon prints them
-              // and it makes two spellings of one code look like one code here
-              // as well as in the database.
-              onChange={(e) => onChange({ ...value, code: e.target.value.toUpperCase() })}
+              onChange={(code) => onChange({ ...value, code })}
+              invalid={Boolean(errors.code)}
             />
-            {known.length > 0 && (
-              <datalist id={listId}>
-                {known.map((a) => (
-                  <option key={a.id} value={a.code}>
-                    {a.taskCount > 0
-                      ? `${a.taskCount} deliver${a.taskCount === 1 ? 'y' : 'ies'} so far`
-                      : ''}
-                  </option>
-                ))}
-              </datalist>
-            )}
           </Field>
         </div>
 
