@@ -49,7 +49,7 @@ export function PrimaryButton({
         // Disabled is a real style rather than the whole button faded out.
         // Fading black to 40% lands on a mid grey that left the white label at
         // about 2.6:1 — legible only if you already know what it says. Muted
-        // ink on the wash measures 5.1:1, so a disabled button still reads as
+        // ink on the wash measures 4.7:1, so a disabled button still reads as
         // a button with a label, not as a smudge.
         'disabled:bg-wash disabled:text-ink-muted disabled:cursor-not-allowed disabled:hover:bg-wash',
         size === 'md' ? 'px-4 py-2' : 'px-3 py-1.5',
