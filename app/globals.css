@@ -16,18 +16,20 @@
 :root {
   --radius: 6px;
 
-  --paper: oklch(0.985 0.004 75);
-  --surface: oklch(0.998 0.002 75);
-  --ink: oklch(0.22 0.012 60);
-  --ink-muted: oklch(0.52 0.008 70);
+  /* WorkinX brand base. paper is never pure white; ink is warmer than #000. */
+  --paper: #f5f3ee;
+  --surface: #fbfaf7;
+  --ink: #161413;
+  --ink-muted: #6b655e;
   /* Decoration only: em-dashes, disabled states, the keyboard hint. Never
      placeholder or informational text, which uses --ink-muted at 5.3:1. */
   --ink-faint: oklch(0.62 0.007 70);
   /* Decorative rules: row separators, band dividers. Not a control boundary,
      so they are free to stay soft. */
-  --rule: oklch(0.9 0.006 75);
-  --rule-strong: oklch(0.84 0.007 75);
-  --wash: oklch(0.965 0.005 75);
+  --rule: oklch(0.885 0.005 75);
+  --rule-strong: oklch(0.82 0.006 75);
+  /* paper-2 from the brand: recessed panels and insets. */
+  --wash: #ece9e1;
 
   /* Complexity capsules.
      A lightness ramp, not a hue ramp: Low to High reads as increasing weight
@@ -44,16 +46,26 @@
      background, so the border is the only affordance and has to carry it. */
   --control: oklch(0.64 0.008 75);
 
-  /* The only accent. Rounds beyond allowance (CLAUDE.md §2.6).
-     Measured on both grounds it appears on: 5.67:1 as text on paper, 5.33:1 as
-     the beyond capsule on its own wash. The earlier pair came to 4.45 once the
-     capsule put tinted colour behind tinted text, which is under AA on the most
-     important value in the product. */
-  --beyond: oklch(0.52 0.16 42);
-  --beyond-wash: oklch(0.968 0.024 60);
+  /* Rounds beyond allowance (§2.6).
+     This is the brand's warning red, whose stated job is "costs you highlights,
+     negative accents, keep rare" — which is exactly what a round past the
+     allowance is. Not invented here, and not the logo's #ED1C24, which stays
+     the logo's alone. */
+  --beyond: #c2412e;
+  --beyond-wash: #fdf2ef;
 
-  --danger: oklch(0.52 0.18 25);
-  --danger-wash: oklch(0.955 0.02 25);
+  --danger: #c2412e;
+  --danger-wash: #fdf2ef;
+
+  /* Lime is identity, pink is action. They never trade places (brand rule).
+     Lime is used as a shape, never as text: #C9F24E on paper has almost no
+     contrast, so it marks things by filling rather than by lettering. */
+  --lime: #c9f24e;
+  /* Named --action, not --accent: shadcn already owns --accent for subtle hover
+     fills, and overloading it turned every hover state pink while leaving these
+     buttons resolving to the wash with white text on it. */
+  --action: #f0489e;
+  --action-soft: #f77ab9;
 
   /* shadcn component contract, mapped onto the ledger palette. */
   --background: var(--paper);
@@ -84,25 +96,25 @@
  * without glowing.
  */
 .dark {
-  --paper: oklch(0.19 0.006 70);
-  --surface: oklch(0.235 0.007 70);
-  --ink: oklch(0.95 0.004 80);
-  --ink-muted: oklch(0.7 0.008 75);
+  --paper: #161413;
+  --surface: #262220;
+  --ink: #f5f3ee;
+  --ink-muted: #a8a29a;
   --ink-faint: oklch(0.6 0.008 70);
   --rule: oklch(0.32 0.008 70);
   --rule-strong: oklch(0.4 0.009 70);
   --wash: oklch(0.26 0.008 70);
   --control: oklch(0.52 0.011 70);
 
-  --beyond: oklch(0.75 0.14 55);
-  --beyond-wash: oklch(0.3 0.05 50);
+  --beyond: #f08a76;
+  --beyond-wash: #3a201b;
 
   --tier-1: oklch(0.27 0.008 70);
   --tier-2: oklch(0.32 0.009 70);
   --tier-3: oklch(0.38 0.01 70);
 
-  --danger: oklch(0.7 0.16 25);
-  --danger-wash: oklch(0.29 0.05 25);
+  --danger: #f08a76;
+  --danger-wash: #3a201b;
 
   --primary: oklch(0.95 0.004 80);
   --primary-foreground: oklch(0.2 0.008 70);
@@ -115,8 +127,9 @@
   --radius-lg: 8px;
   --radius-xl: 12px;
 
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  --font-sans: var(--font-body), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-display), var(--font-body), system-ui, sans-serif;
+  --font-mono: var(--font-mono-brand), ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Fixed scale, ratio ~1.2. Dense, because this is a data tool. */
   --text-micro: 0.6875rem;
@@ -140,6 +153,9 @@
   --color-tier-1: var(--tier-1);
   --color-tier-2: var(--tier-2);
   --color-tier-3: var(--tier-3);
+  --color-lime: var(--lime);
+  --color-action: var(--action);
+  --color-action-soft: var(--action-soft);
   --color-danger: var(--danger);
   --color-danger-wash: var(--danger-wash);
 
@@ -208,6 +224,24 @@
   input[type='date']:hover::-webkit-calendar-picker-indicator {
     opacity: 0.8;
   }
+}
+
+/* Page titles carry the brand's display face; everything else stays Geist. */
+.display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/*
+ * Eyebrow: mono, uppercase, letter-spaced. A signature brand move, used here
+ * for the small section labels above a heading.
+ */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 /* Identifiers read as identifiers. */

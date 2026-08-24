@@ -29,7 +29,7 @@ export function AdminScreen() {
   if (!isAdmin(user)) {
     return (
       <div className="max-w-[40rem]">
-        <h1 className="text-[1.375rem] font-semibold tracking-tight">Admin</h1>
+        <h1 className="display text-[1.5rem] font-semibold">Admin</h1>
         <p className="text-ink-muted mt-2 text-dense">
           This section needs admin or owner access. You are signed in as{' '}
           {user?.role.toLowerCase()}, so nothing here is available to you. Ask an admin
@@ -42,7 +42,7 @@ export function AdminScreen() {
   return (
     <div>
       <div className="border-rule mb-6 border-b pb-5">
-        <h1 className="text-[1.375rem] font-semibold tracking-tight">Admin</h1>
+        <h1 className="display text-[1.5rem] font-semibold">Admin</h1>
         <p className="text-ink-muted mt-1 text-dense">
           Master data. Everything changed here is written to the audit log.
         </p>

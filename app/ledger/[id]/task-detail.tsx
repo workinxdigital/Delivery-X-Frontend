@@ -83,7 +83,7 @@ export function TaskDetailView({ id }: { id: string }) {
       <div className="border-rule border-b pb-5">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="code text-ink-muted">{task.taskCode}</span>
-          <h1 className="text-[1.375rem] font-semibold tracking-tight">
+          <h1 className="display text-[1.5rem] font-semibold">
             {task.title ?? `${task.brandName} — ${task.serviceName}`}
           </h1>
 
@@ -566,7 +566,7 @@ function VariationBlock({
               type="button"
               onClick={submit}
               disabled={mutation.isPending}
-              className="bg-ink text-primary-foreground text-dense hover:bg-ink/90 rounded-md px-3 py-1.5 font-medium transition-colors duration-[120ms] disabled:opacity-50"
+              className="bg-action hover:bg-action-soft text-ink text-dense rounded-md px-3 py-1.5 font-medium transition-colors duration-[120ms] disabled:opacity-50"
             >
               {mutation.isPending ? 'Adding' : 'Add round'}
             </button>

@@ -19,7 +19,7 @@ export default function Page() {
   return (
     <div className="max-w-[40rem]">
       <div className="border-rule mb-6 border-b pb-5">
-        <h1 className="text-[1.375rem] font-semibold tracking-tight">Status</h1>
+        <h1 className="display text-[1.5rem] font-semibold">Status</h1>
         <p className="text-ink-muted mt-1 text-dense">
           Phase 2 of 5. The owner dashboard arrives in Phase 4.
         </p>

@@ -34,7 +34,7 @@ export function LoginForm() {
 
   return (
     <div className="mx-auto max-w-sm pt-16">
-      <h1 className="text-[1.375rem] font-semibold tracking-tight">DeliverX</h1>
+      <h1 className="display text-[1.5rem] font-semibold">DeliverX</h1>
       <p className="text-ink-muted mt-1 text-dense">
         Internal delivery log for WorkinX Digital. Sign in to continue.
       </p>
@@ -77,7 +77,7 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={mutation.isPending || !email || !password}
-          className="bg-ink text-primary-foreground text-dense hover:bg-ink/90 w-full rounded-md px-3 py-2 font-medium transition-colors duration-[120ms] disabled:opacity-50"
+          className="bg-action hover:bg-action-soft text-ink text-dense w-full rounded-md px-3 py-2 font-medium transition-colors duration-[120ms] disabled:opacity-50"
         >
           {mutation.isPending ? 'Signing in' : 'Sign in'}
         </button>

@@ -110,7 +110,7 @@ export function PrimaryButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="bg-ink text-primary-foreground text-dense hover:bg-ink/90 rounded-md px-3 py-1.5 font-medium transition-colors duration-[120ms] disabled:opacity-50"
+      className="bg-action hover:bg-action-soft text-ink text-dense rounded-md px-3 py-1.5 font-medium transition-colors duration-[120ms] disabled:opacity-50"
     >
       {children}
     </button>
