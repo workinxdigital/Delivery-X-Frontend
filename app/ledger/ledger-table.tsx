@@ -110,7 +110,6 @@ export function LedgerTable() {
         }
         agencies={agencies}
         services={services}
-        users={users}
         total={data?.total}
         exportHref={exportCsvUrl(filters)}
       />

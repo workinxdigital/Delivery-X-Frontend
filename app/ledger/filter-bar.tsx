@@ -4,30 +4,17 @@ import { ChevronDown, Download, Search, X } from 'lucide-react'
 import { useState } from 'react'
 import { Combobox, type ComboboxOption } from '@/components/combobox'
 import { Input } from '@/components/ui/input'
-import type { Complexity, TaskFilters, TaskStatus } from '@/lib/api/types'
-import { COMPLEXITY_LABELS, STATUS_LABELS, formatDateOnly, formatCategory } from '@/lib/format'
+import type { TaskFilters } from '@/lib/api/types'
+import { formatDateOnly, formatCategory } from '@/lib/format'
 import { cn } from '@/lib/utils'
-
-const COMPLEXITY_OPTIONS: ComboboxOption[] = (
-  ['LOW', 'MEDIUM', 'HIGH', 'STANDALONE'] as Complexity[]
-).map((c) => ({ value: c, label: COMPLEXITY_LABELS[c] }))
-
-const STATUS_OPTIONS: ComboboxOption[] = (
-  ['DELIVERED', 'REVISION_IN_PROGRESS', 'CLOSED'] as TaskStatus[]
-).map((s) => ({ value: s, label: STATUS_LABELS[s] }))
-
-const EDITED_OPTIONS: ComboboxOption[] = [
-  { value: 'yes', label: 'Edited' },
-  { value: 'no', label: 'Never edited' },
-]
 
 /**
  * Ledger filters.
  *
- * Only the three most-used controls are always visible; the rest sit behind a
- * disclosure, and whatever is active shows as a removable chip. Eight
- * permanently expanded filter boxes pushed the table itself below the fold,
- * which is backwards for a screen whose whole job is the table.
+ * Search, agency and service are always visible; the date range sits behind a
+ * disclosure, and whatever is active shows as a removable chip. Filters kept to
+ * the ones actually used — a row of permanently expanded boxes pushed the table
+ * below the fold, which is backwards for a screen whose whole job is the table.
  */
 export function FilterBar({
   filters,
@@ -35,7 +22,6 @@ export function FilterBar({
   onClear,
   agencies,
   services,
-  users,
   total,
   exportHref,
 }: {
@@ -44,7 +30,6 @@ export function FilterBar({
   onClear: () => void
   agencies: { id: string; name: string }[]
   services: { id: string; name: string; category: string; isBundle: boolean }[]
-  users: { id: string; name: string }[]
   total: number | undefined
   exportHref: string
 }) {
@@ -59,19 +44,6 @@ export function FilterBar({
     filters.serviceId && {
       key: 'serviceId' as const,
       label: services.find((s) => s.id === filters.serviceId)?.name ?? 'Service',
-    },
-    filters.complexity && {
-      key: 'complexity' as const,
-      label: COMPLEXITY_LABELS[filters.complexity],
-    },
-    filters.deliveredById && {
-      key: 'deliveredById' as const,
-      label: users.find((u) => u.id === filters.deliveredById)?.name ?? 'Person',
-    },
-    filters.status && { key: 'status' as const, label: STATUS_LABELS[filters.status] },
-    filters.edited && {
-      key: 'edited' as const,
-      label: filters.edited === 'yes' ? 'Edited' : 'Never edited',
     },
     filters.from && { key: 'from' as const, label: `from ${formatDateOnly(filters.from)}` },
     filters.to && { key: 'to' as const, label: `to ${formatDateOnly(filters.to)}` },
@@ -159,38 +131,6 @@ export function FilterBar({
               type="date"
               value={filters.to ?? ''}
               onChange={(e) => onChange('to', e.target.value)}
-            />
-          </Labelled>
-          <Labelled label="Complexity">
-            <Combobox
-              options={COMPLEXITY_OPTIONS}
-              value={filters.complexity ?? ''}
-              onChange={(v) => onChange('complexity', v as Complexity)}
-              placeholder="All tiers"
-            />
-          </Labelled>
-          <Labelled label="Delivered by">
-            <Combobox
-              options={users.map((u) => ({ value: u.id, label: u.name }))}
-              value={filters.deliveredById ?? ''}
-              onChange={(v) => onChange('deliveredById', v)}
-              placeholder="Anyone"
-            />
-          </Labelled>
-          <Labelled label="Status">
-            <Combobox
-              options={STATUS_OPTIONS}
-              value={filters.status ?? ''}
-              onChange={(v) => onChange('status', v as TaskStatus)}
-              placeholder="Any"
-            />
-          </Labelled>
-          <Labelled label="Edited">
-            <Combobox
-              options={EDITED_OPTIONS}
-              value={filters.edited ?? ''}
-              onChange={(v) => onChange('edited', v as 'yes' | 'no')}
-              placeholder="Any"
             />
           </Labelled>
         </div>
