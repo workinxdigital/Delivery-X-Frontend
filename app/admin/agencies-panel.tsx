@@ -174,8 +174,8 @@ export function AgenciesPanel() {
               <Th>Kind</Th>
               <Th>Free revisions</Th>
               <Th>Status</Th>
-              <Th align="right">Deliveries</Th>
-              <Th align="right">Brands</Th>
+              <Th>Deliveries</Th>
+              <Th>Brands</Th>
               <Th />
             </tr>
           </thead>
@@ -250,10 +250,10 @@ export function AgenciesPanel() {
                     {a.status === 'ACTIVE' ? 'Active' : 'Inactive'}
                   </GhostButton>
                 </Td>
-                <Td align="right" className="tabular">
+                <Td className="tabular">
                   {a.taskCount}
                 </Td>
-                <Td align="right" className="tabular">
+                <Td className="tabular">
                   {a.brandCount}
                 </Td>
                 <Td align="right" control>

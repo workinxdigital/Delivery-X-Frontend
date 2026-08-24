@@ -161,7 +161,7 @@ export function UsersPanel() {
               <Th>Email</Th>
               <Th>Role</Th>
               <Th>Account</Th>
-              <Th align="right">Logged</Th>
+              <Th>Logged</Th>
               <Th />
             </tr>
           </thead>
@@ -209,7 +209,7 @@ export function UsersPanel() {
                       {u.active ? 'Active' : 'Inactive'}
                     </GhostButton>
                   </Td>
-                  <Td align="right" className="tabular">
+                  <Td className="tabular">
                     {u.loggedCount}
                   </Td>
                   <Td align="right" control>

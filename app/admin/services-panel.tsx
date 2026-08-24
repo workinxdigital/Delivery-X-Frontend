@@ -184,9 +184,9 @@ export function ServicesPanel() {
               <Th>Name</Th>
               <Th>Code</Th>
               <Th>Category</Th>
-              <Th align="right">Order</Th>
+              <Th>Order</Th>
               <Th>On the form</Th>
-              <Th align="right">Deliveries</Th>
+              <Th>Deliveries</Th>
               <Th />
             </tr>
           </thead>
@@ -211,7 +211,7 @@ export function ServicesPanel() {
                 </Td>
                 <Td className="code text-ink-muted">{s.code}</Td>
                 <Td className="text-ink-muted">{formatCategory(s.category)}</Td>
-                <Td align="right" className="tabular">
+                <Td className="tabular">
                   {s.sortOrder}
                 </Td>
                 <Td control>
@@ -226,7 +226,7 @@ export function ServicesPanel() {
                     {s.active ? 'Offered' : 'Retired'}
                   </GhostButton>
                 </Td>
-                <Td align="right" className="tabular">
+                <Td className="tabular">
                   {s.taskCount}
                 </Td>
                 <Td align="right" control>
