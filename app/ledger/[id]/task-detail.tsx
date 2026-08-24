@@ -30,6 +30,7 @@ import {
   todayInIST,
 } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { PrimaryButton } from '@/components/primary-button'
 
 export function TaskDetailView({ id }: { id: string }) {
   // The ledger's edit action links here with ?edit=1, so the pencil takes you
@@ -562,14 +563,14 @@ function VariationBlock({
           </Field>
 
           <div className="flex items-center gap-3 sm:col-span-2">
-            <button
+            <PrimaryButton
               type="button"
               onClick={submit}
-              disabled={mutation.isPending}
-              className="bg-action hover:bg-action-soft text-ink text-dense rounded-md px-3 py-1.5 font-medium transition-colors duration-[120ms] disabled:opacity-50"
+              pending={mutation.isPending}
+              pendingLabel="Adding"
             >
-              {mutation.isPending ? 'Adding' : 'Add round'}
-            </button>
+              Add round
+            </PrimaryButton>
             <button
               type="button"
               onClick={() => {

@@ -94,25 +94,10 @@ export function GhostButton({
   )
 }
 
-export function PrimaryButton({
-  children,
-  disabled,
-  type = 'submit',
-  onClick,
-}: {
-  children: React.ReactNode
-  disabled?: boolean
-  type?: 'button' | 'submit'
-  onClick?: () => void
-}) {
-  return (
-    <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled}
-      className="bg-action hover:bg-action-soft text-ink text-dense rounded-md px-3 py-1.5 font-medium transition-colors duration-[120ms] disabled:opacity-50"
-    >
-      {children}
-    </button>
-  )
-}
+/**
+ * Re-exported so the admin panels keep importing PrimaryButton from here.
+ * The button itself now lives in one place for the whole app — this file used
+ * to hold a second copy, which is how the admin CTAs stayed pink after the
+ * sign-in button went black.
+ */
+export { PrimaryButton } from '@/components/primary-button'

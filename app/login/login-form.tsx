@@ -1,12 +1,28 @@
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { Field } from '@/components/field'
+import { PrimaryButton } from '@/components/primary-button'
 import { Input } from '@/components/ui/input'
 import { ApiError, loginRequest } from '@/lib/api/client'
 
+/**
+ * The sign-in screen.
+ *
+ * The nav hides itself on this route, so this is the only place the company
+ * mark appears before you are inside — hence the lockup at the top. It follows
+ * the nav's own arrangement (WorkinX made this · DeliverX is what it is) so the
+ * two screens read as one product rather than two designs.
+ *
+ * The form sits on a raised surface against the paper, centred in the viewport.
+ * That is the whole treatment: this is a tool people open many times a day, and
+ * DESIGN.md rejects decorative gradients and hero furniture. The one piece of
+ * motion is a short entrance, skipped entirely for anyone who has asked their
+ * system for reduced motion.
+ */
 export function LoginForm() {
   const router = useRouter()
   const params = useSearchParams()
@@ -33,60 +49,89 @@ export function LoginForm() {
   })
 
   return (
-    <div className="mx-auto max-w-sm pt-16">
-      <h1 className="display text-[1.5rem] font-semibold">DeliverX</h1>
-      <p className="text-ink-muted mt-1 text-dense">
-        Internal delivery log for WorkinX Digital. Sign in to continue.
-      </p>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          setError(null)
-          mutation.mutate()
-        }}
-        className="mt-8 space-y-4"
-      >
-        <Field label="Email" htmlFor="email">
-          <Input
-            id="email"
-            type="email"
-            autoComplete="username"
-            autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+    <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center px-2 py-8">
+      <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 w-full max-w-[24rem] motion-safe:duration-300">
+        <div className="mb-7 flex items-center">
+          <Image
+            src="/workinx-logo.png"
+            alt="WorkinX Digital"
+            width={720}
+            height={228}
+            priority
+            // 120px is the brand's stated minimum for legibility, which at this
+            // artwork's 3.16:1 ratio makes it 38px tall.
+            className="h-auto w-[120px]"
           />
-        </Field>
+        </div>
 
-        <Field label="Password" htmlFor="password">
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </Field>
+        <div className="border-rule bg-surface rounded-lg border p-6 shadow-[0_1px_2px_rgba(22,20,19,0.04)]">
+          <h1 className="display text-[1.375rem] font-semibold">Sign in</h1>
+          <p className="text-ink-muted mt-1 text-dense">
+            Internal delivery log for WorkinX Digital.
+          </p>
 
-        {/*
-          One message for every failure, matching the API. Saying which half was
-          wrong would let someone work out who has an account here.
-        */}
-        {error && <p className="text-danger text-micro">{error}</p>}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              setError(null)
+              mutation.mutate()
+            }}
+            className="mt-6 space-y-4"
+          >
+            <Field label="Email" htmlFor="email">
+              <Input
+                id="email"
+                type="email"
+                autoComplete="username"
+                autoFocus
+                placeholder="you@workinxdigital.us"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </Field>
 
-        <button
-          type="submit"
-          disabled={mutation.isPending || !email || !password}
-          className="bg-ink text-paper hover:bg-ink/90 text-dense w-full rounded-md px-3 py-2 font-medium transition-colors duration-[120ms] disabled:opacity-50"
-        >
-          {mutation.isPending ? 'Signing in' : 'Sign in'}
-        </button>
-      </form>
+            <Field label="Password" htmlFor="password">
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </Field>
 
-      <p className="text-ink-faint mt-8 text-micro">
-        No password? An admin can set one, or run{' '}
-        <span className="code">npm run set-password</span> in the API project.
-      </p>
+            {/*
+              One message for every failure, matching the API. Saying which half
+              was wrong would let someone work out who has an account here.
+
+              role="alert" so it is announced rather than only appearing, and it
+              sits directly above the button where the eye already is after a
+              failed submit.
+            */}
+            {error && (
+              <p role="alert" className="text-danger text-micro">
+                {error}
+              </p>
+            )}
+
+            <PrimaryButton
+              type="submit"
+              size="md"
+              disabled={!email || !password}
+              pending={mutation.isPending}
+              pendingLabel="Signing in"
+              className="w-full"
+            >
+              Sign in
+            </PrimaryButton>
+          </form>
+        </div>
+
+        <p className="text-ink-faint mt-5 text-micro">
+          No password? An admin can set one from the People panel, or run{' '}
+          <span className="code">npm run set-password</span> in the API project.
+        </p>
+      </div>
     </div>
   )
 }

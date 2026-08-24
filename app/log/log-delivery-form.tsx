@@ -24,6 +24,7 @@ import {
 import type { Complexity } from '@/lib/api/types'
 import { todayInIST, formatCategory } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { PrimaryButton } from '@/components/primary-button'
 
 /** Above this we warn but still allow — a genuine bulk delivery is possible. */
 const VARIATION_SOFT_LIMIT = 20
@@ -451,17 +452,14 @@ export function LogDeliveryForm() {
         )}
 
         <div className="flex items-center gap-4">
-          <button
+          <PrimaryButton
             type="submit"
-            disabled={mutation.isPending}
-            className="bg-action hover:bg-action-soft text-ink text-dense rounded-md px-4 py-2 font-medium transition-colors duration-[120ms] disabled:opacity-50"
+            size="md"
+            pending={mutation.isPending}
+            pendingLabel="Saving"
           >
-            {mutation.isPending
-              ? 'Saving'
-              : duplicateAck
-                ? 'Save anyway'
-                : 'Save delivery'}
-          </button>
+            {duplicateAck ? 'Save anyway' : 'Save delivery'}
+          </PrimaryButton>
 
           <p className="text-ink-faint text-micro">
             <kbd className="text-ink-muted font-sans">⌘</kbd>

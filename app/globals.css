@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+/* tw-animate-css was already a dependency and already relied on by the popover,
+   tooltip, dialog and select components — but never imported, so every one of
+   those enter and exit transitions was silently doing nothing. */
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -57,15 +61,16 @@
   --danger: #c2412e;
   --danger-wash: #fdf2ef;
 
-  /* Lime is identity, pink is action. They never trade places (brand rule).
-     Lime is used as a shape, never as text: #C9F24E on paper has almost no
-     contrast, so it marks things by filling rather than by lettering. */
+  /* Lime is identity, used as a shape and never as text: #C9F24E on paper has
+     almost no contrast, so it marks things by filling rather than by lettering.
+     It marks the active nav item and nothing else.
+
+     The brand's pink used to be the action colour and every CTA was made of it.
+     Buttons are now ink — the owner's call, and it measures better: black on
+     paper is 16.4:1, where the pink managed 3.4:1 and could not carry white
+     lettering at all. Nothing in the app renders pink today, so the token is
+     gone rather than left behind to imply otherwise. */
   --lime: #c9f24e;
-  /* Named --action, not --accent: shadcn already owns --accent for subtle hover
-     fills, and overloading it turned every hover state pink while leaving these
-     buttons resolving to the wash with white text on it. */
-  --action: #f0489e;
-  --action-soft: #f77ab9;
 
   /* shadcn component contract, mapped onto the ledger palette. */
   --background: var(--paper);
@@ -154,8 +159,6 @@
   --color-tier-2: var(--tier-2);
   --color-tier-3: var(--tier-3);
   --color-lime: var(--lime);
-  --color-action: var(--action);
-  --color-action-soft: var(--action-soft);
   --color-danger: var(--danger);
   --color-danger-wash: var(--danger-wash);
 

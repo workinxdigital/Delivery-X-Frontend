@@ -8,6 +8,7 @@ import { Pill } from '@/components/pill'
 import { useSession } from '@/components/session'
 import { Input } from '@/components/ui/input'
 import { ApiError, changePassword } from '@/lib/api/client'
+import { PrimaryButton } from '@/components/primary-button'
 
 const MIN_LENGTH = 10
 
@@ -161,13 +162,9 @@ export function AccountScreen() {
             />
           </Field>
 
-          <button
-            type="submit"
-            disabled={mutation.isPending}
-            className="bg-action hover:bg-action-soft text-ink text-dense rounded-md px-3 py-1.5 font-medium transition-colors duration-[120ms] disabled:opacity-50"
-          >
-            {mutation.isPending ? 'Changing' : 'Change password'}
-          </button>
+          <PrimaryButton type="submit" pending={mutation.isPending} pendingLabel="Changing">
+            Change password
+          </PrimaryButton>
         </form>
 
         <p className="text-ink-faint mt-6 text-micro">

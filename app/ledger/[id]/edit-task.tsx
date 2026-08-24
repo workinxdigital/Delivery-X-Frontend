@@ -17,6 +17,7 @@ import {
 } from '@/lib/api/client'
 import type { Complexity, TaskDetail, TaskStatus } from '@/lib/api/types'
 import { todayInIST } from '@/lib/format'
+import { PrimaryButton } from '@/components/primary-button'
 
 const COMPLEXITIES: { value: Complexity; label: string }[] = [
   { value: 'LOW', label: 'Low' },
@@ -269,13 +270,9 @@ export function EditTask({
       </Field>
 
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="bg-action hover:bg-action-soft text-ink text-dense rounded-md px-3 py-1.5 font-medium transition-colors duration-[120ms] disabled:opacity-50"
-        >
-          {mutation.isPending ? 'Saving' : 'Save changes'}
-        </button>
+        <PrimaryButton type="submit" pending={mutation.isPending} pendingLabel="Saving">
+          Save changes
+        </PrimaryButton>
         <button
           type="button"
           onClick={onDone}
