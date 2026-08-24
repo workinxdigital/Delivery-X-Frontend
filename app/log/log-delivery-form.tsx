@@ -6,7 +6,11 @@ import { toast } from 'sonner'
 import { BrandInput } from '@/components/brand-input'
 import { Combobox, type ComboboxOption } from '@/components/combobox'
 import { Band, Field } from '@/components/field'
-import { Segmented } from '@/components/segmented'
+import {
+  VariationRows,
+  emptyVariation,
+  type VariationDraft,
+} from '@/components/variation-rows'
 import { Input } from '@/components/ui/input'
 import {
   ApiError,
@@ -20,13 +24,6 @@ import type { Complexity } from '@/lib/api/types'
 import { todayInIST } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-const COMPLEXITIES: { value: Complexity; label: string }[] = [
-  { value: 'LOW', label: 'Low' },
-  { value: 'MEDIUM', label: 'Medium' },
-  { value: 'HIGH', label: 'High' },
-  { value: 'STANDALONE', label: 'Standalone' },
-]
-
 /** Above this we warn but still allow — a genuine bulk delivery is possible. */
 const VARIATION_SOFT_LIMIT = 20
 
@@ -34,9 +31,7 @@ type FormState = {
   agencyId: string
   brandName: string
   serviceId: string
-  complexity: Complexity | ''
-  variationCount: string
-  revisionCount: string
+  variations: VariationDraft[]
   deliveredOn: string
   deliveredById: string
   clickupTaskId: string
@@ -47,9 +42,7 @@ const EMPTY: FormState = {
   agencyId: '',
   brandName: '',
   serviceId: '',
-  complexity: '',
-  variationCount: '1',
-  revisionCount: '0',
+  variations: [emptyVariation()],
   deliveredOn: todayInIST(),
   deliveredById: '',
   clickupTaskId: '',
@@ -107,12 +100,11 @@ export function LogDeliveryForm() {
 
   // Only ask about duplicates once every identifying field is filled in.
   const duplicateKey =
-    form.agencyId && form.brandName.trim() && form.serviceId && form.complexity
+    form.agencyId && form.brandName.trim() && form.serviceId
       ? {
           agencyId: form.agencyId,
           brandName: form.brandName.trim(),
           serviceId: form.serviceId,
-          complexity: form.complexity,
           deliveredOn: form.deliveredOn,
         }
       : null
@@ -128,21 +120,27 @@ export function LogDeliveryForm() {
     mutationFn: createTask,
     onSuccess: (result) => {
       const t = result.task
-      const rounds =
-        t.revisionRoundCount > 0
-          ? ` · ${t.revisionRoundCount} revision${t.revisionRoundCount === 1 ? '' : 's'}${
-              t.roundsBeyondAllowance > 0 ? `, ${t.roundsBeyondAllowance} beyond allowance` : ''
-            }`
-          : ''
-      toast(t.taskCode, {
-        description: `${t.brandName} · ${t.serviceName}${result.brandCreated ? ' · new brand' : ''}${rounds}`,
-      })
+      const parts = [
+        `${t.brandName} · ${t.serviceName}`,
+        `${t.variationCount} variation${t.variationCount === 1 ? '' : 's'}`,
+      ]
+      if (t.revisionRoundCount > 0) {
+        parts.push(
+          `${t.revisionRoundCount} revision${t.revisionRoundCount === 1 ? '' : 's'}` +
+            (t.roundsBeyondAllowancePerVariation > 0 || t.roundsBeyondAllowancePerDelivery > 0
+              ? ` (${t.roundsBeyondAllowancePerVariation} beyond per variation, ${t.roundsBeyondAllowancePerDelivery} per delivery)`
+              : ''),
+        )
+      }
+      if (result.brandCreated) parts.push('new brand')
+      toast(t.taskCode, { description: parts.join(' · ') })
       if (result.variationWarning) toast.warning(result.variationWarning)
 
       // Reset, but keep agency and brand: PMs log several for one brand in a
       // row, and retyping them is the main source of friction (§5.1).
       setForm((f) => ({
         ...EMPTY,
+        variations: [emptyVariation()],
         agencyId: f.agencyId,
         brandName: f.brandName,
         deliveredById: f.deliveredById,
@@ -171,11 +169,11 @@ export function LogDeliveryForm() {
     if (!form.agencyId) next.agencyId = 'Pick an agency'
     if (!form.brandName.trim()) next.brandName = 'Enter a brand'
     if (!form.serviceId) next.serviceId = 'Pick a service'
-    if (!form.complexity) next.complexity = 'Pick a complexity'
-    const variations = Number(form.variationCount)
-    if (!Number.isInteger(variations) || variations < 1) next.variationCount = 'At least 1'
-    const revisions = Number(form.revisionCount)
-    if (!Number.isInteger(revisions) || revisions < 0) next.revisionCount = '0 or more'
+    form.variations.forEach((v, i) => {
+      if (!v.complexity) next[`variations.${i}.complexity`] = 'Pick one'
+      const n = Number(v.revisionCount)
+      if (!Number.isInteger(n) || n < 0) next[`variations.${i}.revisionCount`] = '0 or more'
+    })
     if (!form.deliveredOn) next.deliveredOn = 'Pick a date'
     else if (form.deliveredOn > todayInIST()) next.deliveredOn = 'Cannot be in the future'
     if (!form.deliveredById) next.deliveredById = 'Pick who delivered it'
@@ -193,9 +191,10 @@ export function LogDeliveryForm() {
       agencyId: form.agencyId,
       brandName: form.brandName.trim(),
       serviceId: form.serviceId,
-      complexity: form.complexity as Complexity,
-      variationCount: Number(form.variationCount),
-      revisionCount: Number(form.revisionCount),
+      variations: form.variations.map((v) => ({
+        complexity: v.complexity as Complexity,
+        revisionCount: Number(v.revisionCount),
+      })),
       deliveredOn: form.deliveredOn,
       deliveredById: form.deliveredById,
       clickupTaskId: form.clickupTaskId.trim() || null,
@@ -203,27 +202,6 @@ export function LogDeliveryForm() {
     })
   }
 
-  const variations = Number(form.variationCount)
-  const revisions = Number(form.revisionCount)
-
-  /**
-   * Tells the PM what the number they just typed will mean, before they save.
-   * The allowance comes from the selected agency, which is the value that gets
-   * snapshotted onto the task (§2.6).
-   */
-  const revisionHint = (() => {
-    if (!selectedAgency || !Number.isFinite(revisions) || revisions <= 0) {
-      return variations > VARIATION_SOFT_LIMIT
-        ? `${variations} variations is unusually high. Worth a check.`
-        : undefined
-    }
-    const allowance = selectedAgency.freeRevisionAllowance
-    const beyond = Math.max(0, revisions - allowance)
-    const within = revisions - beyond
-    return beyond > 0
-      ? `${within} within the allowance of ${allowance}, ${beyond} beyond it.`
-      : `All ${revisions} within the allowance of ${allowance}.`
-  })()
 
   return (
     <form
@@ -302,57 +280,22 @@ export function LogDeliveryForm() {
           />
         </Field>
 
-        <div className="grid gap-4 sm:grid-cols-[1fr_6rem_6rem]">
-          <Field label="Complexity" error={errors.complexity}>
-            <Segmented
-              name="Complexity"
-              options={COMPLEXITIES}
-              value={form.complexity}
-              invalid={Boolean(errors.complexity)}
-              onChange={(v) => set('complexity', v)}
-            />
-          </Field>
-
-          <Field
-            label="Variations"
-            htmlFor="variations"
-            error={errors.variationCount}
-          >
-            <Input
-              id="variations"
-              type="number"
-              min={1}
-              step={1}
-              value={form.variationCount}
-              aria-invalid={Boolean(errors.variationCount)}
-              onChange={(e) => set('variationCount', e.target.value)}
-            />
-          </Field>
-
-          {/*
-            Replaces the old task title field. The number typed here becomes
-            that many real revision_round records server-side, each classified
-            against this agency's allowance, so the count stays reportable
-            rather than being a second loose number on the task.
-          */}
-          <Field
-            label="Revisions"
-            htmlFor="revisions"
-            error={errors.revisionCount}
-          >
-            <Input
-              id="revisions"
-              type="number"
-              min={0}
-              step={1}
-              value={form.revisionCount}
-              aria-invalid={Boolean(errors.revisionCount)}
-              onChange={(e) => set('revisionCount', e.target.value)}
-            />
-          </Field>
-        </div>
-
-        {revisionHint && <p className="text-ink-muted text-micro">{revisionHint}</p>}
+        <Field
+          label="Variations"
+          error={errors.variations}
+          hint="Each variation carries its own complexity and its own revision count."
+        >
+          <VariationRows
+            variations={form.variations}
+            onChange={(next) => {
+              setForm((f) => ({ ...f, variations: next }))
+              setErrors({})
+              setDuplicateAck(false)
+            }}
+            allowance={selectedAgency?.freeRevisionAllowance}
+            errors={errors}
+          />
+        </Field>
 
       </Band>
 

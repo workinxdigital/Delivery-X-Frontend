@@ -48,12 +48,19 @@ export type Task = {
   serviceName: string
   serviceCategory: string
   isBundle: boolean
-  complexity: Complexity
+  /** Legacy single value, null on anything logged since variations landed. */
+  complexity: Complexity | null
+  /** The tiers actually present, in variation order. */
+  complexities: Complexity[]
   variationCount: number
+  variations: TaskVariation[]
   title: string | null
   status: TaskStatus
   revisionRoundCount: number
-  roundsBeyondAllowance: number
+  /** Sum over variations of that variation's excess. Attributable to rounds. */
+  roundsBeyondAllowancePerVariation: number
+  /** Total rounds minus one allowance. Arithmetic on the whole delivery. */
+  roundsBeyondAllowancePerDelivery: number
   /** The allowance frozen at logging time, not the agency's current setting. */
   freeRevisionAllowanceSnapshot: number
   deliveredById: string
@@ -72,6 +79,21 @@ export type Task = {
 
 export type RevisionReason = { id: string; code: string; label: string }
 
+/** One variation of a deliverable, with its own complexity and its own rounds. */
+export type TaskVariation = {
+  id: string
+  variationNumber: number
+  complexity: Complexity
+  revisionRoundCount: number
+  /** Beyond this variation's own allowance. */
+  roundsBeyondAllowance: number
+}
+
+export type TaskVariationDetail = TaskVariation & {
+  notes: string | null
+  revisionRounds: RevisionRound[]
+}
+
 export type RevisionRound = {
   id: string
   roundNumber: number
@@ -84,7 +106,14 @@ export type RevisionRound = {
   loggedByName: string
 }
 
-export type TaskDetail = Task & { revisionRounds: RevisionRound[] }
+/**
+ * Omit rather than intersect: `Task & { variations: X[] }` leaves the narrower
+ * `TaskVariation[]` from Task in place, so the rounds are invisible to the
+ * compiler.
+ */
+export type TaskDetail = Omit<Task, 'variations'> & {
+  variations: TaskVariationDetail[]
+}
 
 export type AddRevisionRoundPayload = {
   reasonId: string
@@ -93,19 +122,22 @@ export type AddRevisionRoundPayload = {
   notes?: string | null
 }
 
+export type VariationPayload = {
+  complexity: Complexity
+  /**
+   * Becomes that many real revision_round records on this variation, each
+   * classified against the agency's snapshotted allowance.
+   */
+  revisionCount: number
+  notes?: string | null
+}
+
 export type CreateTaskPayload = {
   agencyId: string
   brandName: string
   serviceId: string
-  complexity: Complexity
-  variationCount: number
-  /**
-   * How many revision rounds this delivery had. The server turns this into that
-   * many real revision_round records, each classified against the agency's
-   * snapshotted allowance, so one typed number stays fully reportable.
-   */
-  revisionCount: number
-  /** Optional: the logging form replaced this field with the revisions count. */
+  /** At least one. variationCount is derived from this, never typed separately. */
+  variations: VariationPayload[]
   title?: string | null
   deliveredOn: string
   deliveredById: string

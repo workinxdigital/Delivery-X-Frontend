@@ -129,7 +129,17 @@ export function LedgerTable() {
                     </span>
                   )}
                 </Td>
-                <Td className="text-ink-muted">{COMPLEXITY_LABELS[task.complexity]}</Td>
+                {/*
+                  Complexity lives on variations now, so this shows the mix.
+                  A delivery can be Low + High.
+                */}
+                <Td className="text-ink-muted whitespace-nowrap">
+                  {task.complexities.length > 0
+                    ? task.complexities.map((c) => COMPLEXITY_LABELS[c]).join(' + ')
+                    : task.complexity
+                      ? COMPLEXITY_LABELS[task.complexity]
+                      : '—'}
+                </Td>
                 <Td align="right">{task.variationCount}</Td>
                 {/*
                   Titles are optional since the form swapped that field for a
@@ -149,16 +159,26 @@ export function LedgerTable() {
                     <span>
                       {task.revisionRoundCount}
                       {/*
-                        The only place colour appears in the product. It means
-                        exactly one thing: rounds past the allowance snapshotted
-                        on this task (CLAUDE.md §2.6). A count, never a charge.
+                        The only place colour appears in the product, and it
+                        means one thing: rounds past the allowance (§2.6). Two
+                        readings exist, so the larger one is shown and the title
+                        spells both out. A count, never a charge.
                       */}
-                      {task.roundsBeyondAllowance > 0 && (
+                      {(task.roundsBeyondAllowancePerVariation > 0 ||
+                        task.roundsBeyondAllowancePerDelivery > 0) && (
                         <span
                           className="text-beyond ml-1.5 font-medium"
-                          title={`${task.roundsBeyondAllowance} beyond the allowance of ${task.freeRevisionAllowanceSnapshot} in force when this was logged`}
+                          title={
+                            `Allowance ${task.freeRevisionAllowanceSnapshot} when logged. ` +
+                            `${task.roundsBeyondAllowancePerVariation} beyond counting each variation separately, ` +
+                            `${task.roundsBeyondAllowancePerDelivery} beyond counting the delivery as one.`
+                          }
                         >
-                          +{task.roundsBeyondAllowance}
+                          +
+                          {Math.max(
+                            task.roundsBeyondAllowancePerVariation,
+                            task.roundsBeyondAllowancePerDelivery,
+                          )}
                         </span>
                       )}
                     </span>

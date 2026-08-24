@@ -97,14 +97,20 @@ export const getTask = (id: string) =>
 export const getRevisionReasons = () =>
   apiFetch<{ reasons: RevisionReason[] }>('/revision-reasons').then((r) => r.reasons)
 
-export const addRevisionRound = (taskId: string, payload: AddRevisionRoundPayload) =>
+/** Rounds hang off a variation, since that is what they now belong to. */
+export const addRevisionRound = (variationId: string, payload: AddRevisionRoundPayload) =>
   apiFetch<{
     round: { id: string; roundNumber: number; beyondAllowance: boolean }
-    revisionRoundCount: number
-    roundsBeyondAllowance: number
+    variationNumber: number
+    variation: { revisionRoundCount: number; roundsBeyondAllowance: number }
+    delivery: {
+      variationCount: number
+      totalRounds: number
+      roundsBeyondAllowancePerVariation: number
+      roundsBeyondAllowancePerDelivery: number
+    }
     allowanceInForce: number
-    withinAllowance: number
-  }>(`/tasks/${taskId}/revision-rounds`, {
+  }>(`/variations/${variationId}/revision-rounds`, {
     method: 'POST',
     body: JSON.stringify(payload),
   })
@@ -119,7 +125,6 @@ export const checkDuplicate = (params: {
   agencyId: string
   brandName: string
   serviceId: string
-  complexity: string
   deliveredOn: string
 }) =>
   apiFetch<{ duplicate: DuplicateWarning }>(`/tasks/duplicate-check${qs(params)}`).then(

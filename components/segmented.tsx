@@ -53,7 +53,7 @@ export function Segmented<T extends string>({
               if (next) onChange(next.value)
             }}
             className={cn(
-              'text-dense px-2 py-2 transition-colors duration-[120ms]',
+              'px-1.5 py-2 text-micro transition-colors duration-[120ms] sm:text-dense',
               // Hairline dividers between segments, not gaps: it is one control.
               i > 0 && 'border-control border-l',
               selected
