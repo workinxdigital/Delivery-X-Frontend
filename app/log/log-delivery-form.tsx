@@ -321,14 +321,11 @@ export function LogDeliveryForm() {
           return (
             <div
               key={serviceId}
-              className={cn(
-                'border-rule pt-4',
-                // A rule between sections, but not above the first one: the
-                // field above it already provides the separation.
-                index > 0 && 'border-t',
-              )}
+              // Spacing separates the sections rather than a rule. With a
+              // heading, a label row and a hairline the block was mostly chrome.
+              className={cn(index > 0 && 'pt-5')}
             >
-              <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
+              <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2">
                 <span className="text-dense font-medium">{service.name}</span>
                 {service.isBundle && (
                   <span className="border-rule text-ink-muted rounded-sm border px-1 text-micro">

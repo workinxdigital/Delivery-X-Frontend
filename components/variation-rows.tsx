@@ -21,16 +21,23 @@ const COMPLEXITIES: { value: Complexity; label: string }[] = [
 export const emptyVariation = (): VariationDraft => ({ complexity: '', revisionCount: '0' })
 
 /**
- * The variations of one delivery, each with its own complexity and its own
- * revision count.
+ * One shared column template for the heading row and every variation row, so
+ * the labels sit exactly over what they label. Previously the heading started
+ * at the segmented control while the row started at the number marker, which
+ * left a ragged edge.
  *
- * This replaced a single complexity plus a bare variation count, because
- * variation 1 can be a low-complexity pass that needed two revisions while
- * variation 2 was high complexity and needed six. A count could not carry that.
+ * The number track is always present, even with a single variation, so adding a
+ * second one does not shift the whole row sideways.
+ */
+const GRID = 'grid grid-cols-[1.25rem_1fr] gap-x-3 sm:grid-cols-[1.25rem_minmax(0,21rem)_6rem_1.5rem]'
+
+/**
+ * The variations of one delivered service, each with its own complexity and its
+ * own revision count.
  *
- * Rows are numbered rather than labelled, and the numbering is positional: the
- * server assigns variation numbers in the order sent, so removing row 1
- * renumbers the rest. That matches how a PM thinks about "variation 2".
+ * Kept deliberately quiet. The common case is a single variation, and that
+ * should read as one line rather than a panel: no row number, no border on the
+ * add control, and the labels stated once for the whole section.
  */
 export function VariationRows({
   variations,
@@ -56,120 +63,109 @@ export function VariationRows({
   })
   const total = counts.reduce((a, b) => a + b, 0)
 
-  // Both readings, computed the same way the server will (§2.6).
+  // Both readings, computed the way the server will (§2.6).
   const perVariation =
     allowance === undefined
       ? 0
       : counts.reduce((sum, n) => sum + Math.max(0, n - allowance), 0)
   const perDelivery = allowance === undefined ? 0 : Math.max(0, total - allowance)
 
+  const numbered = variations.length > 1
+
   return (
-    <div className="space-y-3">
-      {/*
-        Column labels, once per service section rather than repeated on every
-        row. Without them the segmented control and the number box are just
-        shapes: you cannot tell what the number counts.
-      */}
-      <div className="hidden gap-3 sm:grid sm:grid-cols-[2.5rem_1fr_5.5rem_1.75rem]">
+    <div className="space-y-1.5">
+      {/* Labels once for the section, aligned to the row grid. */}
+      <div className={cn(GRID, 'hidden sm:grid')}>
         <span />
-        <span className="text-ink-muted text-micro font-medium">Complexity</span>
-        <span className="text-ink-muted text-micro font-medium">Revisions</span>
+        <span className="text-ink-muted text-micro">Complexity</span>
+        <span className="text-ink-muted text-micro">Revisions</span>
         <span />
       </div>
 
-      <div className="space-y-2">
-        {variations.map((variation, i) => (
-          <div
-            key={i}
-            className="grid items-start gap-3 sm:grid-cols-[2.5rem_1fr_5.5rem_1.75rem]"
-          >
-            <span
-              className="text-ink-muted pt-2.5 text-dense whitespace-nowrap"
-              title={`Variation ${i + 1}`}
-            >
-              #{i + 1}
-            </span>
+      {variations.map((variation, i) => (
+        <div key={i} className={cn(GRID, 'items-start')}>
+          {/* Only numbered once there is more than one to tell apart. */}
+          <span className="text-ink-faint pt-2 text-micro tabular">
+            {numbered ? i + 1 : ''}
+          </span>
 
-            <div className="space-y-1">
-              <span className="text-ink-muted text-micro font-medium sm:hidden">
-                Complexity
-              </span>
-              <Segmented
-                name={`Complexity for variation ${i + 1}`}
-                options={COMPLEXITIES}
-                value={variation.complexity}
-                invalid={Boolean(errors[`variations.${i}.complexity`])}
-                onChange={(v) => update(i, { complexity: v })}
-              />
-              {errors[`variations.${i}.complexity`] && (
-                <p className="text-danger text-micro">
-                  {errors[`variations.${i}.complexity`]}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-ink-muted text-micro font-medium sm:hidden">
-                Revisions
-              </span>
-              <Input
-                type="number"
-                min={0}
-                step={1}
-                aria-label={`Revisions for variation ${i + 1}`}
-                value={variation.revisionCount}
-                aria-invalid={Boolean(errors[`variations.${i}.revisionCount`])}
-                onChange={(e) => update(i, { revisionCount: e.target.value })}
-              />
-              {errors[`variations.${i}.revisionCount`] && (
-                <p className="text-danger text-micro">
-                  {errors[`variations.${i}.revisionCount`]}
-                </p>
-              )}
-            </div>
-
-            {/* One variation is the minimum, so the last row cannot be removed. */}
-            <button
-              type="button"
-              onClick={() => remove(i)}
-              disabled={variations.length === 1}
-              aria-label={`Remove variation ${i + 1}`}
-              className={cn(
-                'text-ink-faint hover:text-ink hover:bg-wash mt-1 flex size-7 items-center justify-center rounded-md transition-colors duration-[120ms]',
-                variations.length === 1 && 'invisible',
-              )}
-            >
-              <X className="size-3.5" />
-            </button>
+          <div className="space-y-1">
+            <span className="text-ink-muted text-micro sm:hidden">Complexity</span>
+            <Segmented
+              name={`Complexity for variation ${i + 1}`}
+              options={COMPLEXITIES}
+              value={variation.complexity}
+              invalid={Boolean(errors[`variations.${i}.complexity`])}
+              onChange={(v) => update(i, { complexity: v })}
+            />
+            {errors[`variations.${i}.complexity`] && (
+              <p className="text-danger text-micro">
+                {errors[`variations.${i}.complexity`]}
+              </p>
+            )}
           </div>
-        ))}
-      </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <button
-          type="button"
-          onClick={add}
-          className="border-control text-ink-muted hover:text-ink hover:bg-wash flex items-center gap-1.5 rounded-md border px-2 py-1 text-micro transition-colors duration-[120ms]"
-        >
-          <Plus className="size-3" />
-          Add variation
-        </button>
+          <div className="space-y-1">
+            <span className="text-ink-muted text-micro sm:hidden">Revisions</span>
+            <Input
+              type="number"
+              min={0}
+              step={1}
+              aria-label={`Revisions for variation ${i + 1}`}
+              value={variation.revisionCount}
+              aria-invalid={Boolean(errors[`variations.${i}.revisionCount`])}
+              onChange={(e) => update(i, { revisionCount: e.target.value })}
+            />
+            {errors[`variations.${i}.revisionCount`] && (
+              <p className="text-danger text-micro">
+                {errors[`variations.${i}.revisionCount`]}
+              </p>
+            )}
+          </div>
 
-        {allowance !== undefined && total > 0 && (
-          <p className="text-ink-muted text-micro">
-            {total} revision{total === 1 ? '' : 's'} across {variations.length} variation
-            {variations.length === 1 ? '' : 's'}, allowance {allowance}.{' '}
-            {/* Two readings, so both are stated rather than picking one. */}
-            <span className={perVariation > 0 ? 'text-beyond font-medium' : undefined}>
-              {perVariation} beyond per variation
-            </span>
-            {', '}
-            <span className={perDelivery > 0 ? 'text-beyond font-medium' : undefined}>
-              {perDelivery} beyond per delivery
-            </span>
-            .
-          </p>
-        )}
+          {/* One variation is the minimum, so nothing to remove in that case. */}
+          <button
+            type="button"
+            onClick={() => remove(i)}
+            aria-label={`Remove variation ${i + 1}`}
+            className={cn(
+              'text-ink-faint hover:text-ink mt-1 flex size-7 items-center justify-center rounded-md transition-colors duration-[120ms]',
+              !numbered && 'invisible',
+            )}
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      ))}
+
+      <div className={cn(GRID, 'items-baseline')}>
+        <span />
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 sm:col-span-3">
+          {/* A quiet text control, not another bordered block. */}
+          <button
+            type="button"
+            onClick={add}
+            className="text-ink-muted hover:text-ink flex items-center gap-1 text-micro transition-colors duration-[120ms]"
+          >
+            <Plus className="size-3" />
+            Add variation
+          </button>
+
+          {allowance !== undefined && total > 0 && (
+            <p className="text-ink-faint text-micro">
+              {total} revision{total === 1 ? '' : 's'}, allowance {allowance}.{' '}
+              {/* Two readings, so both are stated rather than picking one. */}
+              <span className={perVariation > 0 ? 'text-beyond font-medium' : undefined}>
+                {perVariation} beyond per variation
+              </span>
+              {', '}
+              <span className={perDelivery > 0 ? 'text-beyond font-medium' : undefined}>
+                {perDelivery} per delivery
+              </span>
+              .
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
