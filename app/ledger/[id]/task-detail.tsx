@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Combobox } from '@/components/combobox'
+import { ComplexityPill, Pill } from '@/components/pill'
 import { Field } from '@/components/field'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,7 +18,13 @@ import {
   getTasks,
 } from '@/lib/api/client'
 import type { TaskVariationDetail } from '@/lib/api/types'
-import { COMPLEXITY_LABELS, STATUS_LABELS, formatDateOnly, todayInIST } from '@/lib/format'
+import {
+  COMPLEXITY_LABELS,
+  STATUS_LABELS,
+  formatDateOnly,
+  summarizeComplexities,
+  todayInIST,
+} from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 export function TaskDetailView({ id }: { id: string }) {
@@ -52,7 +59,7 @@ export function TaskDetailView({ id }: { id: string }) {
   }
 
   const locked = task.periodStatus === 'LOCKED'
-  const mix = task.complexities.map((c) => COMPLEXITY_LABELS[c]).join(' + ')
+  const tiers = summarizeComplexities(task.complexities).tiers
 
   return (
     <div className="max-w-[52rem]">
@@ -81,14 +88,18 @@ export function TaskDetailView({ id }: { id: string }) {
         <Detail label="Service">
           {task.serviceName}
           {task.isBundle && (
-            <span className="border-rule text-ink-muted ml-1.5 rounded-sm border px-1 text-micro">
+            <Pill tone="outline" className="ml-1.5">
               bundle
-            </span>
+            </Pill>
           )}
         </Detail>
         <Detail label="Variations">
-          {task.variationCount}
-          {mix && <span className="text-ink-muted"> · {mix}</span>}
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            <span className="tabular">{task.variationCount}</span>
+            {tiers.map((tier) => (
+              <ComplexityPill key={tier} complexity={tier} />
+            ))}
+          </span>
         </Detail>
         <Detail label="Revisions">
           {task.revisionRoundCount === 0 ? (
@@ -319,20 +330,15 @@ function VariationBlock({
       <div className="border-rule flex flex-wrap items-baseline justify-between gap-3 border-b pb-2">
         <div className="flex flex-wrap items-baseline gap-x-3">
           <span className="text-dense font-medium">Variation {variation.variationNumber}</span>
-          <span className="text-ink-muted text-dense">
-            {COMPLEXITY_LABELS[variation.complexity]}
-          </span>
+          <ComplexityPill complexity={variation.complexity} />
           <span className="text-ink-muted text-micro">
             {variation.revisionRoundCount === 0
               ? 'no revisions'
               : `${within} within allowance`}
-            {variation.roundsBeyondAllowance > 0 && (
-              <span className="text-beyond font-medium">
-                {', '}
-                {variation.roundsBeyondAllowance} beyond
-              </span>
-            )}
           </span>
+          {variation.roundsBeyondAllowance > 0 && (
+            <Pill tone="beyond">{variation.roundsBeyondAllowance} beyond</Pill>
+          )}
         </div>
 
         {!locked && !adding && (
@@ -364,13 +370,12 @@ function VariationBlock({
                   {round.loggedByName}
                 </span>
               </span>
-              <span
-                className={cn(
-                  'text-micro whitespace-nowrap sm:text-right',
-                  round.beyondAllowance ? 'text-beyond font-medium' : 'text-ink-muted',
+              <span className="sm:text-right">
+                {round.beyondAllowance ? (
+                  <Pill tone="beyond">beyond allowance</Pill>
+                ) : (
+                  <Pill tone="neutral">within allowance</Pill>
                 )}
-              >
-                {round.beyondAllowance ? 'beyond allowance' : 'within allowance'}
               </span>
             </li>
           ))}

@@ -64,10 +64,12 @@ export const STATUS_LABELS = {
  * down the page, plus a full breakdown for the tooltip.
  */
 export function summarizeComplexities(list: (keyof typeof COMPLEXITY_LABELS)[]): {
+  /** Distinct tiers present, in severity order. One capsule each. */
+  tiers: (keyof typeof COMPLEXITY_LABELS)[]
   label: string
   detail: string
 } {
-  if (list.length === 0) return { label: '', detail: '' }
+  if (list.length === 0) return { tiers: [], label: '', detail: '' }
 
   const counts = new Map<keyof typeof COMPLEXITY_LABELS, number>()
   for (const c of list) counts.set(c, (counts.get(c) ?? 0) + 1)
@@ -76,6 +78,7 @@ export function summarizeComplexities(list: (keyof typeof COMPLEXITY_LABELS)[]):
   const present = order.filter((c) => counts.has(c))
 
   return {
+    tiers: present,
     label: present.map((c) => COMPLEXITY_LABELS[c]).join(' + '),
     detail: present.map((c) => `${counts.get(c)} × ${COMPLEXITY_LABELS[c]}`).join(', '),
   }

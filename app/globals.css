@@ -29,15 +29,28 @@
   --rule-strong: oklch(0.84 0.007 75);
   --wash: oklch(0.965 0.005 75);
 
+  /* Complexity capsules.
+     A lightness ramp, not a hue ramp: Low to High reads as increasing weight
+     without borrowing colour, because colour in this product means one thing
+     and it is not complexity. Standalone sits off the ramp entirely, since it
+     is a different kind of thing rather than a higher tier. */
+  --tier-1: oklch(0.955 0.005 75);
+  --tier-2: oklch(0.925 0.006 75);
+  --tier-3: oklch(0.885 0.008 75);
+
   /* Interactive boundaries: inputs, comboboxes, segmented control, buttons.
      Measured at 3.25:1 against --paper, because WCAG 1.4.11 wants 3:1 for the
      edge that tells you a control is a control. Our inputs share the page
      background, so the border is the only affordance and has to carry it. */
   --control: oklch(0.64 0.008 75);
 
-  /* The only accent. Rounds beyond allowance (CLAUDE.md §2.6). */
-  --beyond: oklch(0.55 0.155 45);
-  --beyond-wash: oklch(0.95 0.03 60);
+  /* The only accent. Rounds beyond allowance (CLAUDE.md §2.6).
+     Measured on both grounds it appears on: 5.67:1 as text on paper, 5.33:1 as
+     the beyond capsule on its own wash. The earlier pair came to 4.45 once the
+     capsule put tinted colour behind tinted text, which is under AA on the most
+     important value in the product. */
+  --beyond: oklch(0.52 0.16 42);
+  --beyond-wash: oklch(0.968 0.024 60);
 
   --danger: oklch(0.52 0.18 25);
   --danger-wash: oklch(0.955 0.02 25);
@@ -84,6 +97,10 @@
   --beyond: oklch(0.75 0.14 55);
   --beyond-wash: oklch(0.3 0.05 50);
 
+  --tier-1: oklch(0.27 0.008 70);
+  --tier-2: oklch(0.32 0.009 70);
+  --tier-3: oklch(0.38 0.01 70);
+
   --danger: oklch(0.7 0.16 25);
   --danger-wash: oklch(0.29 0.05 25);
 
@@ -120,6 +137,9 @@
   --color-wash: var(--wash);
   --color-beyond: var(--beyond);
   --color-beyond-wash: var(--beyond-wash);
+  --color-tier-1: var(--tier-1);
+  --color-tier-2: var(--tier-2);
+  --color-tier-3: var(--tier-3);
   --color-danger: var(--danger);
   --color-danger-wash: var(--danger-wash);
 

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
+import { ComplexityPill, Pill } from '@/components/pill'
 import { Skeleton } from '@/components/ui/skeleton'
 import { exportCsvUrl, getAgencies, getServices, getTasks, getUsers } from '@/lib/api/client'
 import type { Task, TaskFilters } from '@/lib/api/types'
@@ -28,7 +29,7 @@ const COLUMNS: {
   { key: 'agency', label: 'Agency' },
   { key: 'service', label: 'Service' },
   { key: 'variations', label: 'Variations', sort: 'variationCount' },
-  { key: 'revisions', label: 'Revisions', sort: undefined },
+  { key: 'revisions', label: 'Revisions' },
   { key: 'by', label: 'Delivered by' },
 ]
 
@@ -221,27 +222,33 @@ function Row({ task }: { task: Task }) {
       <Td className="text-ink-muted max-w-[16ch] truncate" title={task.agencyName}>
         {task.agencyName}
         {task.agencyType === 'DIRECT' && (
-          <span className="text-ink-faint ml-1 text-micro">direct</span>
+          <Pill tone="outline" className="ml-1.5">
+            direct
+          </Pill>
         )}
       </Td>
 
       <Td className="max-w-[18ch] truncate whitespace-nowrap" title={task.serviceName}>
         {task.serviceName}
         {task.isBundle && (
-          <span className="border-rule text-ink-muted ml-1.5 rounded-sm border px-1 text-micro">
+          <Pill tone="outline" className="ml-1.5">
             bundle
-          </span>
+          </Pill>
         )}
       </Td>
 
       {/*
-        Count and complexity mix in one cell. Seven variations all at High now
-        read "7 · High" instead of repeating the word seven times, with the full
-        breakdown on hover.
+        Count, then one capsule per distinct tier. Seven variations all at High
+        show a single "High" capsule rather than the word seven times; the full
+        breakdown is on hover.
       */}
       <Td className="whitespace-nowrap" title={mix.detail || undefined}>
-        <span className="text-ink">{task.variationCount}</span>
-        {mix.label && <span className="text-ink-muted"> · {mix.label}</span>}
+        <span className="inline-flex items-center gap-1.5">
+          <span className="text-ink tabular">{task.variationCount}</span>
+          {mix.tiers.map((tier) => (
+            <ComplexityPill key={tier} complexity={tier} />
+          ))}
+        </span>
       </Td>
 
       {/*
@@ -256,7 +263,7 @@ function Row({ task }: { task: Task }) {
         at the same x.
       */}
       <Td className="whitespace-nowrap">
-        <span className="inline-grid grid-cols-[2.5ch_2.25rem] items-baseline gap-1.5">
+        <span className="inline-grid grid-cols-[2.5ch_3rem] items-center gap-1.5">
           <span
             className={cn('text-left', task.revisionRoundCount === 0 && 'text-ink-faint')}
           >
@@ -268,9 +275,10 @@ function Row({ task }: { task: Task }) {
             the allowance (§2.6). Two readings exist, so the larger is shown and
             the tooltip spells both out. A count, never a charge.
           */}
-          <span className="text-beyond text-left font-medium">
+          <span className="text-left">
             {beyond > 0 && (
-              <span
+              <Pill
+                tone="beyond"
                 title={
                   `Allowance ${task.freeRevisionAllowanceSnapshot} when logged. ` +
                   `${task.roundsBeyondAllowancePerVariation} beyond counting each variation separately, ` +
@@ -278,7 +286,7 @@ function Row({ task }: { task: Task }) {
                 }
               >
                 +{beyond}
-              </span>
+              </Pill>
             )}
           </span>
         </span>
@@ -287,16 +295,17 @@ function Row({ task }: { task: Task }) {
       <Td className="text-ink-muted max-w-[14ch] truncate whitespace-nowrap">
         {task.deliveredByName}
         {task.editCount > 0 && (
-          <span
-            className="border-rule text-ink-muted ml-1.5 rounded-sm border px-1 text-micro"
+          <Pill
+            tone="outline"
+            className="ml-1.5"
             title={
               task.lastEditedAt
                 ? `Last edited ${formatTimestamp(task.lastEditedAt)}${task.lastEditedByName ? ` by ${task.lastEditedByName}` : ''}`
                 : undefined
             }
           >
-            {task.editCount}×
-          </span>
+            edited {task.editCount}×
+          </Pill>
         )}
       </Td>
     </tr>
