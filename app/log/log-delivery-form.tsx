@@ -7,6 +7,7 @@ import { BrandInput } from '@/components/brand-input'
 import { Combobox, type ComboboxOption } from '@/components/combobox'
 import type { MultiOption } from '@/components/multi-select'
 import { AsinSection, emptyAsin, type AsinDraft } from '@/components/asin-section'
+import { BulkAsins, type BulkAsin } from '@/components/bulk-asins'
 import { Band, Field } from '@/components/field'
 import { Input } from '@/components/ui/input'
 import {
@@ -298,6 +299,40 @@ export function LogDeliveryForm() {
       </Band>
 
       <Band title="Products" className="py-7">
+        {/*
+          Bulk entry first, because a job with a hundred listings should never
+          reach the manual path at all.
+        */}
+        <BulkAsins
+          services={services}
+          onApply={(bulk: BulkAsin[]) => {
+            setForm((f) => ({
+              ...f,
+              asins: bulk.map((b) => {
+                const draft = emptyAsin()
+                return {
+                  ...draft,
+                  code: b.code,
+                  serviceIds: b.lines.map((l) => l.serviceId),
+                  variationsByService: Object.fromEntries(
+                    b.lines.map((l) => [
+                      l.serviceId,
+                      // The form's own row shape: revisionCount is a string
+                      // there because it is a text input mid-typing.
+                      l.variations.map((v) => ({
+                        complexity: v.complexity,
+                        revisionCount: String(v.revisionCount),
+                      })),
+                    ]),
+                  ),
+                }
+              }),
+            }))
+            setErrors({})
+            setDuplicateAck(false)
+          }}
+        />
+
         <Field
           label="Number of ASINs"
           htmlFor="asinCount"
