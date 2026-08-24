@@ -46,15 +46,33 @@ export function Th({
 export function Td({
   children,
   align,
+  control,
   className,
 }: {
   children?: React.ReactNode
   align?: 'right'
+  /**
+   * Set when the cell's content is an inline button rather than plain text.
+   *
+   * The cell already pads by 8px, and the buttons inside these tables pad again
+   * by their own 8px, so their label started 8px further in than the column
+   * heading directly above it — every interactive column sat a few pixels off
+   * its own header while the plain-text columns lined up. Pulling the cell's
+   * padding back on the side the content is aligned to puts the label's edge
+   * where the heading's edge is, without making the button's click target any
+   * smaller.
+   */
+  control?: boolean
   className?: string
 }) {
   return (
     <td
-      className={cn('px-2 py-2.5 align-middle', align === 'right' && 'text-right', className)}
+      className={cn(
+        'px-2 py-2.5 align-middle',
+        align === 'right' ? 'text-right' : 'text-left',
+        control && (align === 'right' ? 'pr-0' : 'pl-0'),
+        className,
+      )}
     >
       {children}
     </td>
@@ -68,6 +86,7 @@ export function GhostButton({
   disabled,
   title,
   type = 'button',
+  className,
 }: {
   children: React.ReactNode
   onClick?: () => void
@@ -75,6 +94,7 @@ export function GhostButton({
   disabled?: boolean
   title?: string
   type?: 'button' | 'submit'
+  className?: string
 }) {
   return (
     <button
@@ -87,6 +107,7 @@ export function GhostButton({
         danger
           ? 'text-ink-muted hover:text-danger hover:bg-wash'
           : 'text-ink-muted hover:text-ink hover:bg-wash',
+        className,
       )}
     >
       {children}

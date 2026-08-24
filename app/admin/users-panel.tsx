@@ -200,7 +200,7 @@ export function UsersPanel() {
                       />
                     )}
                   </Td>
-                  <Td>
+                  <Td control>
                     <GhostButton
                       disabled={isMe}
                       onClick={() => save.mutate({ id: u.id, payload: { active: !u.active } })}
@@ -212,7 +212,7 @@ export function UsersPanel() {
                   <Td align="right" className="tabular">
                     {u.loggedCount}
                   </Td>
-                  <Td align="right">
+                  <Td align="right" control>
                     {resetting === u.id ? (
                       <span className="flex items-center justify-end gap-1.5">
                         <Input

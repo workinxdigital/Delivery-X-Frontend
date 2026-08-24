@@ -33,6 +33,8 @@ function codeFromName(name: string): string {
 export function ServicesPanel() {
   const queryClient = useQueryClient()
   const [adding, setAdding] = useState(false)
+  /** Which row is asking to confirm a delete. */
+  const [confirming, setConfirming] = useState<string | null>(null)
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [codeTouched, setCodeTouched] = useState(false)
 
@@ -212,7 +214,7 @@ export function ServicesPanel() {
                 <Td align="right" className="tabular">
                   {s.sortOrder}
                 </Td>
-                <Td>
+                <Td control>
                   <GhostButton
                     onClick={() => save.mutate({ id: s.id, payload: { active: !s.active } })}
                     title={
@@ -227,19 +229,41 @@ export function ServicesPanel() {
                 <Td align="right" className="tabular">
                   {s.taskCount}
                 </Td>
-                <Td align="right">
-                  <GhostButton
-                    danger
-                    disabled={s.taskCount > 0 || remove.isPending}
-                    onClick={() => remove.mutate(s.id)}
-                    title={
-                      s.taskCount > 0
-                        ? `${s.taskCount} deliveries reference this. Retire it instead.`
-                        : 'Delete'
-                    }
-                  >
-                    Delete
-                  </GhostButton>
+                <Td align="right" control>
+                  {/*
+                    Same rule as agencies: a service with deliveries logged
+                    against it cannot be deleted, because those records would
+                    point at something this screen says is gone. Switching it off
+                    takes it out of the logging form and keeps the history
+                    readable. Stated in words — a greyed-out button explains
+                    nothing, and on a touch screen its tooltip never appears.
+                  */}
+                  {s.taskCount > 0 ? (
+                    <span
+                      className="text-ink-faint text-micro"
+                      title={`${s.taskCount} deliveries reference this service, so its history has to stay readable.`}
+                    >
+                      In use · switch off
+                    </span>
+                  ) : confirming === s.id ? (
+                    <span className="inline-flex items-center gap-1">
+                      <GhostButton
+                        danger
+                        disabled={remove.isPending}
+                        onClick={() => {
+                          remove.mutate(s.id)
+                          setConfirming(null)
+                        }}
+                      >
+                        {remove.isPending ? 'Deleting' : 'Confirm'}
+                      </GhostButton>
+                      <GhostButton onClick={() => setConfirming(null)}>Cancel</GhostButton>
+                    </span>
+                  ) : (
+                    <GhostButton danger onClick={() => setConfirming(s.id)}>
+                      Delete
+                    </GhostButton>
+                  )}
                 </Td>
               </tr>
             ))}

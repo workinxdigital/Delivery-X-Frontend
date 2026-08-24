@@ -43,6 +43,8 @@ export function AgenciesPanel() {
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [editing, setEditing] = useState<string | null>(null)
+  /** Which row is asking to confirm a delete. */
+  const [confirming, setConfirming] = useState<string | null>(null)
   const [allowanceDraft, setAllowanceDraft] = useState('')
 
   const { data: agencies = [], isLoading } = useQuery({
@@ -194,7 +196,7 @@ export function AgenciesPanel() {
                     {a.type === 'DIRECT' ? 'Direct' : 'Agency'}
                   </Pill>
                 </Td>
-                <Td>
+                <Td control>
                   {editing === a.id ? (
                     <span className="flex items-center gap-1.5">
                       <Input
@@ -224,14 +226,14 @@ export function AgenciesPanel() {
                         setEditing(a.id)
                         setAllowanceDraft(String(a.freeRevisionAllowance))
                       }}
-                      className="hover:bg-wash rounded px-1 tabular"
+                      className="hover:bg-wash rounded px-2 tabular"
                       title="Change the allowance"
                     >
                       {a.freeRevisionAllowance}
                     </button>
                   )}
                 </Td>
-                <Td>
+                <Td control>
                   <GhostButton
                     onClick={() =>
                       save.mutate({
@@ -254,24 +256,45 @@ export function AgenciesPanel() {
                 <Td align="right" className="tabular">
                   {a.brandCount}
                 </Td>
-                <Td align="right">
+                <Td align="right" control>
                   {/*
-                    Deleting master data with history would leave deliveries
-                    pointing at something this screen says is gone, so the API
-                    refuses it and the button says why rather than failing.
+                    An agency with deliveries cannot be deleted: those records
+                    would point at something this screen says is gone. The API
+                    refuses it too (409 AGENCY_IN_USE) — this is the explanation,
+                    not the enforcement.
+
+                    Said in words rather than as a greyed-out button with a
+                    tooltip. A disabled control tells you that you cannot do
+                    something but not why, and on a touch screen there is no
+                    hover to reveal the reason at all.
                   */}
-                  <GhostButton
-                    danger
-                    disabled={a.taskCount > 0 || remove.isPending}
-                    onClick={() => remove.mutate(a.id)}
-                    title={
-                      a.taskCount > 0
-                        ? `${a.taskCount} deliveries reference this. Set it Inactive instead.`
-                        : 'Delete'
-                    }
-                  >
-                    Delete
-                  </GhostButton>
+                  {a.taskCount > 0 ? (
+                    <span
+                      className="text-ink-faint text-micro"
+                      title={`${a.taskCount} deliveries reference this agency, so its history has to stay readable.`}
+                    >
+                      In use · set Inactive
+                    </span>
+                  ) : confirming === a.id ? (
+                    <span className="inline-flex items-center gap-1">
+                      <GhostButton
+                        danger
+                        disabled={remove.isPending}
+                        onClick={() => {
+                          remove.mutate(a.id)
+                          setConfirming(null)
+                        }}
+                      >
+                        {remove.isPending ? 'Deleting' : 'Confirm'}
+                      </GhostButton>
+                      <GhostButton onClick={() => setConfirming(null)}>Cancel</GhostButton>
+                    </span>
+                  ) : (
+                    /* Master data, so a stray click should not remove it. */
+                    <GhostButton danger onClick={() => setConfirming(a.id)}>
+                      Delete
+                    </GhostButton>
+                  )}
                 </Td>
               </tr>
             ))}
