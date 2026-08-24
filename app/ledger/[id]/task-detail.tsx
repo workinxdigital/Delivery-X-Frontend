@@ -1,9 +1,11 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
+import { EditTask } from './edit-task'
 import { toast } from 'sonner'
 import { Combobox } from '@/components/combobox'
 import { ComplexityPill, Pill } from '@/components/pill'
@@ -15,6 +17,7 @@ import {
   addRevisionRound,
   getRevisionReasons,
   getTask,
+  getTaskHistory,
   getTasks,
 } from '@/lib/api/client'
 import type { TaskVariationDetail } from '@/lib/api/types'
@@ -22,12 +25,18 @@ import {
   COMPLEXITY_LABELS,
   STATUS_LABELS,
   formatDateOnly,
+  formatTimestamp,
   summarizeComplexities,
   todayInIST,
 } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 export function TaskDetailView({ id }: { id: string }) {
+  // The ledger's edit action links here with ?edit=1, so the pencil takes you
+  // straight into the form rather than to the record and then the form.
+  const params = useSearchParams()
+  const [editing, setEditing] = useState(params.get('edit') === '1')
+
   const { data: task, isLoading, isError, error } = useQuery({
     queryKey: ['task', id],
     queryFn: () => getTask(id),
@@ -77,12 +86,38 @@ export function TaskDetailView({ id }: { id: string }) {
           <h1 className="text-[1.375rem] font-semibold tracking-tight">
             {task.title ?? `${task.brandName} — ${task.serviceName}`}
           </h1>
+
+          {!editing && (
+            <button
+              type="button"
+              disabled={locked}
+              onClick={() => setEditing(true)}
+              title={
+                locked
+                  ? 'This task is in a locked period and cannot be edited.'
+                  : undefined
+              }
+              className="border-control text-ink-muted hover:text-ink hover:bg-wash ml-auto flex items-center gap-1.5 rounded-md border px-2 py-1 text-micro transition-colors duration-[120ms] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Pencil className="size-3" />
+              Edit
+            </button>
+          )}
         </div>
         <p className="text-ink-muted mt-1 text-dense">
           {task.agencyName} · {task.brandName} · {formatDateOnly(task.deliveredOn)} ·{' '}
           {STATUS_LABELS[task.status]}
         </p>
       </div>
+
+      {locked && (
+        <p className="text-ink-muted mt-3 text-micro">
+          This task is in a locked period, so it cannot be edited. Log a correction in
+          the current open period noting this task code.
+        </p>
+      )}
+
+      {editing && <EditTask task={task} onDone={() => setEditing(false)} />}
 
       <dl className="divide-rule grid divide-y">
         <Detail label="Service">
@@ -142,14 +177,7 @@ export function TaskDetailView({ id }: { id: string }) {
         </div>
       </section>
 
-      <section className="border-rule mt-10 border-t pt-6">
-        <h2 className="text-dense font-medium">Edit history</h2>
-        <p className="text-ink-muted mt-1 text-micro">
-          {task.editCount === 0
-            ? 'Never edited. Editing a delivered task arrives in Phase 2.5.'
-            : `Edited ${task.editCount}×.`}
-        </p>
-      </section>
+      <EditHistory task={task} />
     </div>
   )
 }
@@ -194,6 +222,119 @@ function SameDelivery({
       </ul>
     </section>
   )
+}
+
+/**
+ * The edit history (§2.7, §5.3).
+ *
+ * A query against audit_log, which is the truth; the counter on the task is a
+ * denormalized convenience for the ledger. An unedited task shows nothing but
+ * the creation entry, because there is nothing to report yet.
+ */
+function EditHistory({
+  task,
+}: {
+  task: { id: string; editCount: number; lastEditedAt: string | null; lastEditedByName: string | null }
+}) {
+  const [open, setOpen] = useState(false)
+  const { data: history = [] } = useQuery({
+    queryKey: ['history', task.id],
+    queryFn: () => getTaskHistory(task.id),
+    enabled: open,
+  })
+
+  const edits = history.filter((h) => h.action === 'UPDATE')
+
+  return (
+    <section className="border-rule mt-10 border-t pt-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div>
+          <h2 className="text-dense font-medium">Edit history</h2>
+          <p className="text-ink-muted mt-1 text-micro">
+            {task.editCount === 0 ? (
+              'Never edited.'
+            ) : (
+              <>
+                Edited {task.editCount}×
+                {task.lastEditedAt && (
+                  <>
+                    {' · last '}
+                    {formatTimestamp(task.lastEditedAt)}
+                    {task.lastEditedByName && ` by ${task.lastEditedByName}`}
+                  </>
+                )}
+              </>
+            )}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="text-ink-muted hover:text-ink text-micro underline decoration-dotted transition-colors duration-[120ms]"
+        >
+          {open ? 'Hide' : 'Show'} full record
+        </button>
+      </div>
+
+      {open && (
+        <ol className="divide-rule mt-4 divide-y">
+          {history.length === 0 && (
+            <li className="text-ink-muted py-3 text-micro">Loading…</li>
+          )}
+          {history.map((entry) => (
+            <li key={entry.id} className="py-3">
+              <div className="flex flex-wrap items-baseline gap-x-2">
+                <span className="text-dense">{ACTION_LABELS[entry.action] ?? entry.action}</span>
+                <span className="text-ink-faint text-micro">
+                  {formatTimestamp(entry.at)} · {entry.actorName}
+                </span>
+              </div>
+              {entry.reason && (
+                <p className="text-ink-muted mt-0.5 text-micro">“{entry.reason}”</p>
+              )}
+              {/* Field-level before and after, which is what makes an edit visible. */}
+              {entry.action === 'UPDATE' && entry.after && (
+                <ul className="mt-1 space-y-0.5">
+                  {Object.keys(entry.after ?? {}).map((field) => (
+                    <li key={field} className="text-micro">
+                      <span className="text-ink-muted">{field}</span>{' '}
+                      <span className="text-ink-faint">
+                        {JSON.stringify(entry.before?.[field] ?? null)} →
+                      </span>{' '}
+                      <span className="text-ink">
+                        {JSON.stringify(entry.after?.[field] ?? null)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {task.editCount > 0 && edits.length === 0 && open && (
+        <p className="text-ink-muted mt-2 text-micro">
+          The counter says {task.editCount}, but no edit entries were found. That
+          disagreement is worth investigating: audit_log is the truth.
+        </p>
+      )}
+    </section>
+  )
+}
+
+const ACTION_LABELS: Record<string, string> = {
+  CREATE: 'Logged',
+  UPDATE: 'Edited',
+  SOFT_DELETE: 'Removed',
+  RESTORE: 'Restored',
+  REVISION_ROUND_ADDED: 'Revision round added',
+  REVISION_ROUND_UPDATED: 'Revision round changed',
+  REVISION_ROUND_DELETED: 'Revision round removed',
+  BRAND_MERGE: 'Brand merged',
+  PERIOD_LOCK: 'Period locked',
+  PERIOD_UNLOCK: 'Period unlocked',
 }
 
 function Detail({ label, children }: { label: string; children: React.ReactNode }) {

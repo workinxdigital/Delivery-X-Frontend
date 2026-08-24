@@ -1,12 +1,21 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { ComplexityPill, Pill } from '@/components/pill'
 import { Skeleton } from '@/components/ui/skeleton'
-import { exportCsvUrl, getAgencies, getServices, getTasks, getUsers } from '@/lib/api/client'
+import { toast } from 'sonner'
+import { ConfirmRemove } from '@/components/confirm-remove'
+import {
+  deleteTask,
+  exportCsvUrl,
+  getAgencies,
+  getServices,
+  getTasks,
+  getUsers,
+} from '@/lib/api/client'
 import type { Task, TaskFilters } from '@/lib/api/types'
 import { formatDateOnly, formatTimestamp, summarizeComplexities } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -30,7 +39,10 @@ const COLUMNS: {
   { key: 'service', label: 'Service' },
   { key: 'variations', label: 'Variations', sort: 'variationCount' },
   { key: 'revisions', label: 'Revisions' },
-  { key: 'by', label: 'Delivered by' },
+  { key: 'by', label: 'By' },
+  // Row actions. No header: the icons explain themselves and a label here would
+  // just be a word above two glyphs.
+  { key: 'actions', label: '' },
 ]
 
 export function LedgerTable() {
@@ -70,6 +82,22 @@ export function LedgerTable() {
   const hasFilters = Object.entries(filters).some(
     ([k, v]) => !['page', 'pageSize', 'sort', 'dir'].includes(k) && v,
   )
+
+  const queryClient = useQueryClient()
+  const [removing, setRemoving] = useState<{ id: string; taskCode: string } | null>(null)
+
+  const removal = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string | null }) =>
+      deleteTask(id, reason),
+    onSuccess: (result) => {
+      toast(`${result.removed.taskCode} removed`, {
+        description: 'It is out of the ledger and the counts. Nothing was erased.',
+      })
+      setRemoving(null)
+      void queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not remove it'),
+  })
 
   return (
     <div className="space-y-5">
@@ -157,11 +185,20 @@ export function LedgerTable() {
             )}
 
             {data?.tasks.map((task) => (
-              <Row key={task.id} task={task} />
+              <Row key={task.id} task={task} onRemove={setRemoving} />
             ))}
           </tbody>
         </table>
       </div>
+
+      {removing && (
+        <ConfirmRemove
+          taskCode={removing.taskCode}
+          pending={removal.isPending}
+          onCancel={() => setRemoving(null)}
+          onConfirm={(reason) => removal.mutate({ id: removing.id, reason })}
+        />
+      )}
 
       {data && data.pageCount > 1 && (
         <div className="flex items-center justify-between">
@@ -188,7 +225,13 @@ export function LedgerTable() {
   )
 }
 
-function Row({ task }: { task: Task }) {
+function Row({
+  task,
+  onRemove,
+}: {
+  task: Task
+  onRemove: (task: { id: string; taskCode: string }) => void
+}) {
   const mix = summarizeComplexities(task.complexities)
   const beyond = Math.max(
     task.roundsBeyondAllowancePerVariation,
@@ -199,7 +242,7 @@ function Row({ task }: { task: Task }) {
   const noteish = task.title ?? task.notes
 
   return (
-    <tr className="border-rule hover:bg-wash border-b transition-colors duration-[120ms]">
+    <tr className="border-rule hover:bg-wash group border-b transition-colors duration-[120ms]">
       <Td className="whitespace-nowrap">
         <Link
           href={`/ledger/${task.id}`}
@@ -307,6 +350,32 @@ function Row({ task }: { task: Task }) {
             edited {task.editCount}×
           </Pill>
         )}
+      </Td>
+
+      {/*
+        Revealed on hover to keep the table quiet, but always reachable by
+        keyboard: focus-within brings them back, and each has a real label.
+      */}
+      <Td className="whitespace-nowrap">
+        <span className="flex items-center gap-0.5 opacity-0 transition-opacity duration-[120ms] group-hover:opacity-100 focus-within:opacity-100">
+          <Link
+            href={`/ledger/${task.id}?edit=1`}
+            aria-label={`Edit ${task.taskCode}`}
+            title={`Edit ${task.taskCode}`}
+            className="text-ink-faint hover:text-ink hover:bg-wash flex size-6 items-center justify-center rounded-md transition-colors duration-[120ms]"
+          >
+            <Pencil className="size-3.5" />
+          </Link>
+          <button
+            type="button"
+            onClick={() => onRemove({ id: task.id, taskCode: task.taskCode })}
+            aria-label={`Remove ${task.taskCode}`}
+            title={`Remove ${task.taskCode}`}
+            className="text-ink-faint hover:text-danger hover:bg-wash flex size-6 items-center justify-center rounded-md transition-colors duration-[120ms]"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        </span>
       </Td>
     </tr>
   )

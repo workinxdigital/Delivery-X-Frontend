@@ -20,6 +20,9 @@ import type {
   TaskDetail,
   TaskFilters,
   TaskListResult,
+  UpdateTaskPayload,
+  UpdateTaskResult,
+  HistoryEntry,
   User,
 } from './types'
 
@@ -127,6 +130,22 @@ export const createTask = (payload: CreateTaskPayload) =>
     method: 'POST',
     body: JSON.stringify(payload),
   })
+
+export const updateTask = (id: string, payload: UpdateTaskPayload) =>
+  apiFetch<UpdateTaskResult>(`/tasks/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+
+/** Soft delete: the row stops appearing but is never removed (§4.2). */
+export const deleteTask = (id: string, reason?: string | null) =>
+  apiFetch<{ removed: { id: string; taskCode: string; deletedAt: string } }>(
+    `/tasks/${id}`,
+    { method: 'DELETE', body: JSON.stringify({ reason: reason ?? null }) },
+  )
+
+export const getTaskHistory = (id: string) =>
+  apiFetch<{ history: HistoryEntry[] }>(`/tasks/${id}/history`).then((r) => r.history)
 
 export const checkDuplicate = (params: {
   agencyId: string

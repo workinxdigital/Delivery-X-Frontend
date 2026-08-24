@@ -200,3 +200,38 @@ export type TaskFilters = {
   sort?: 'deliveredOn' | 'createdAt' | 'taskCode' | 'variationCount'
   dir?: 'asc' | 'desc'
 }
+
+/** A partial edit. An absent field is left alone rather than cleared (§2.7). */
+export type UpdateTaskPayload = {
+  agencyId?: string
+  brandName?: string
+  serviceId?: string
+  title?: string | null
+  deliveredOn?: string
+  deliveredById?: string
+  status?: TaskStatus
+  clickupTaskId?: string | null
+  notes?: string | null
+  /** Complexity per variation, keyed by variation id. */
+  variationComplexity?: Record<string, Complexity>
+  /** Optional note explaining the edit, stored on the audit entry. */
+  reason?: string | null
+}
+
+export type UpdateTaskResult = {
+  task: Task | null
+  /** False when nothing actually differed: no counter, no history entry. */
+  changed: boolean
+  editCount: number
+  changedFields: string[]
+}
+
+export type HistoryEntry = {
+  id: string
+  action: string
+  actorName: string
+  reason: string | null
+  at: string
+  before: Record<string, unknown> | null
+  after: Record<string, unknown> | null
+}
