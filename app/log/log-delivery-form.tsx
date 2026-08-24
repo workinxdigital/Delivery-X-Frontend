@@ -7,6 +7,7 @@ import { BrandInput } from '@/components/brand-input'
 import { Combobox, type ComboboxOption } from '@/components/combobox'
 import type { MultiOption } from '@/components/multi-select'
 import { AsinSection, emptyAsin, type AsinDraft } from '@/components/asin-section'
+import { ApplyToAll } from '@/components/apply-to-all'
 import { BulkAsins, type BulkAsin } from '@/components/bulk-asins'
 import { Band, Field } from '@/components/field'
 import { Input } from '@/components/ui/input'
@@ -365,6 +366,34 @@ export function LogDeliveryForm() {
             }}
           />
         </Field>
+
+        {form.asins.length > 1 && (
+          <ApplyToAll
+            count={form.asins.length}
+            emptyCount={form.asins.filter((a) => a.serviceIds.length === 0).length}
+            serviceOptions={serviceOptions}
+            allowance={selectedAgency?.freeRevisionAllowance}
+            onApply={({ serviceIds, complexity, revisionCount, onlyEmpty }) => {
+              setForm((f) => ({
+                ...f,
+                asins: f.asins.map((a) => {
+                  if (onlyEmpty && a.serviceIds.length > 0) return a
+                  return {
+                    ...a,
+                    serviceIds,
+                    // One variation per service, at the chosen tier. Sections
+                    // that need two variations get them individually after.
+                    variationsByService: Object.fromEntries(
+                      serviceIds.map((id) => [id, [{ complexity, revisionCount }]]),
+                    ),
+                  }
+                }),
+              }))
+              setErrors({})
+              setDuplicateAck(false)
+            }}
+          />
+        )}
 
         <div className="space-y-4">
           {form.asins.map((asin, index) => (
