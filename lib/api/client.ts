@@ -113,6 +113,12 @@ export const getUsers = () => apiFetch<{ users: User[] }>('/users').then((r) => 
 export const getBrands = (agencyId: string, q?: string) =>
   apiFetch<{ brands: Brand[] }>(`/brands${qs({ agencyId, q })}`).then((r) => r.brands)
 
+/** ASINs already used for a brand, for the logging form's autocomplete. */
+export const getAsins = (brandId: string, q?: string) =>
+  apiFetch<{ asins: { id: string; code: string; taskCount: number }[] }>(
+    `/asins${qs({ brandId, q })}`,
+  ).then((r) => r.asins)
+
 // ---------------------------------------------------------------- tasks
 
 export const getTasks = (filters: TaskFilters) =>

@@ -35,6 +35,7 @@ const COLUMNS: {
   { key: 'code', label: 'Code', sort: 'taskCode' },
   { key: 'delivered', label: 'Delivered', sort: 'deliveredOn' },
   { key: 'brand', label: 'Brand' },
+  { key: 'asin', label: 'ASIN' },
   { key: 'agency', label: 'Agency' },
   { key: 'service', label: 'Service' },
   { key: 'variations', label: 'Variations', sort: 'variationCount' },
@@ -260,6 +261,16 @@ function Row({
       {/* Brand is the primary identity, so it carries the weight. */}
       <Td className="max-w-[16ch] truncate font-medium" title={task.brandName}>
         {task.brandName}
+      </Td>
+
+      {/*
+        The product listing this row was for. Monospaced, because an ASIN is a
+        code to be compared character by character rather than read as a word.
+        An em dash where there is none: the code is optional on the form, so a
+        blank cell would look like a rendering fault.
+      */}
+      <Td className="text-ink-muted whitespace-nowrap">
+        {task.asinCode ? <span className="code">{task.asinCode}</span> : '—'}
       </Td>
 
       <Td className="text-ink-muted max-w-[16ch] truncate" title={task.agencyName}>

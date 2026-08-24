@@ -5,19 +5,16 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { BrandInput } from '@/components/brand-input'
 import { Combobox, type ComboboxOption } from '@/components/combobox'
-import { MultiSelect, type MultiOption } from '@/components/multi-select'
+import type { MultiOption } from '@/components/multi-select'
+import { AsinSection, emptyAsin, type AsinDraft } from '@/components/asin-section'
 import { Band, Field } from '@/components/field'
-import {
-  VariationRows,
-  emptyVariation,
-  type VariationDraft,
-} from '@/components/variation-rows'
 import { Input } from '@/components/ui/input'
 import {
   ApiError,
   checkDuplicate,
   createTask,
   getAgencies,
+  getBrands,
   getServices,
   getUsers,
 } from '@/lib/api/client'
@@ -26,16 +23,14 @@ import { todayInIST, formatCategory } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { PrimaryButton } from '@/components/primary-button'
 
-/** Above this we warn but still allow — a genuine bulk delivery is possible. */
-const VARIATION_SOFT_LIMIT = 20
-
 type FormState = {
   agencyId: string
   brandName: string
-  /** Order matters: it becomes the order of the sections and the saved rows. */
-  serviceIds: string[]
-  /** Keyed by serviceId, so deselecting and reselecting does not lose the work. */
-  variationsByService: Record<string, VariationDraft[]>
+  /**
+   * One entry per product listing. Order matters: it becomes the order of the
+   * sections on screen and of the rows written to the ledger.
+   */
+  asins: AsinDraft[]
   deliveredOn: string
   deliveredById: string
   clickupTaskId: string
@@ -45,8 +40,7 @@ type FormState = {
 const EMPTY: FormState = {
   agencyId: '',
   brandName: '',
-  serviceIds: [],
-  variationsByService: {},
+  asins: [emptyAsin()],
   deliveredOn: todayInIST(),
   deliveredById: '',
   clickupTaskId: '',
@@ -105,10 +99,29 @@ export function LogDeliveryForm() {
 
   const selectedAgency = agencies.find((a) => a.id === form.agencyId)
 
+  /** One ledger row per service per ASIN, which is what the note below reports. */
+  const rowCount = form.asins.reduce((n, a) => n + a.serviceIds.length, 0)
+
+  /**
+   * The brand's id, when the typed name is one that already exists.
+   *
+   * ASIN suggestions are scoped to a brand, and the form only has the name a PM
+   * is typing. A brand being entered for the first time has no id and no ASINs
+   * yet, which is why this is allowed to be null rather than blocking anything.
+   */
+  const { data: brandMatches = [] } = useQuery({
+    queryKey: ['brands', form.agencyId, form.brandName.trim()],
+    queryFn: () => getBrands(form.agencyId, form.brandName.trim()),
+    enabled: Boolean(form.agencyId && form.brandName.trim()),
+  })
+  const typedBrand = form.brandName.trim().toLowerCase()
+  const brandId =
+    brandMatches.find((b) => b.name.trim().toLowerCase() === typedBrand)?.id ?? null
+
   // Only ask about duplicates once every identifying field is filled in.
   // Advisory only, so checking the first service is enough to catch the
   // accidental double-save this guards against (§5.1).
-  const firstService = form.serviceIds[0]
+  const firstService = form.asins[0]?.serviceIds[0]
   const duplicateKey =
     form.agencyId && form.brandName.trim() && firstService
       ? {
@@ -180,16 +193,22 @@ export function LogDeliveryForm() {
     const next: Record<string, string> = {}
     if (!form.agencyId) next.agencyId = 'Pick an agency'
     if (!form.brandName.trim()) next.brandName = 'Enter a brand'
-    if (form.serviceIds.length === 0) next.serviceIds = 'Pick at least one service'
-    for (const serviceId of form.serviceIds) {
-      const rows = form.variationsByService[serviceId] ?? []
-      rows.forEach((v, i) => {
-        if (!v.complexity) next[`${serviceId}.variations.${i}.complexity`] = 'Pick one'
-        const n = Number(v.revisionCount)
-        if (!Number.isInteger(n) || n < 0)
-          next[`${serviceId}.variations.${i}.revisionCount`] = '0 or more'
-      })
-    }
+    // Errors are namespaced by ASIN index, so one section cannot light up
+    // another section's fields.
+    form.asins.forEach((asin, ai) => {
+      if (asin.serviceIds.length === 0) {
+        next[`a${ai}.serviceIds`] = 'Pick at least one service'
+      }
+      for (const serviceId of asin.serviceIds) {
+        const rows = asin.variationsByService[serviceId] ?? []
+        rows.forEach((v, i) => {
+          if (!v.complexity) next[`a${ai}.${serviceId}.variations.${i}.complexity`] = 'Pick one'
+          const n = Number(v.revisionCount)
+          if (!Number.isInteger(n) || n < 0)
+            next[`a${ai}.${serviceId}.variations.${i}.revisionCount`] = '0 or more'
+        })
+      }
+    })
     if (!form.deliveredOn) next.deliveredOn = 'Pick a date'
     else if (form.deliveredOn > todayInIST()) next.deliveredOn = 'Cannot be in the future'
     if (!form.deliveredById) next.deliveredById = 'Pick who delivered it'
@@ -206,11 +225,14 @@ export function LogDeliveryForm() {
     mutation.mutate({
       agencyId: form.agencyId,
       brandName: form.brandName.trim(),
-      lines: form.serviceIds.map((serviceId) => ({
-        serviceId,
-        variations: (form.variationsByService[serviceId] ?? []).map((v) => ({
-          complexity: v.complexity as Complexity,
-          revisionCount: Number(v.revisionCount),
+      asins: form.asins.map((asin) => ({
+        code: asin.code.trim() || null,
+        lines: asin.serviceIds.map((serviceId) => ({
+          serviceId,
+          variations: (asin.variationsByService[serviceId] ?? []).map((v) => ({
+            complexity: v.complexity as Complexity,
+            revisionCount: Number(v.revisionCount),
+          })),
         })),
       })),
       deliveredOn: form.deliveredOn,
@@ -275,98 +297,77 @@ export function LogDeliveryForm() {
         </Field>
       </Band>
 
-      <Band title="What shipped" className="py-7">
+      <Band title="Products" className="py-7">
         <Field
-          label="Services"
-          htmlFor="services"
-          error={errors.serviceIds}
-          hint="Pick every service this job covered. Each one gets its own variations below."
+          label="Number of ASINs"
+          htmlFor="asinCount"
+          hint="How many product listings this job covered. Each one gets its own services and variations."
         >
-          <MultiSelect
-            id="services"
-            options={serviceOptions}
-            values={form.serviceIds}
-            invalid={Boolean(errors.serviceIds)}
-            placeholder="Select one or more services"
-            searchPlaceholder="Search the catalogue"
-            onChange={(next) => {
-              setForm((f) => ({
-                ...f,
-                serviceIds: next,
-                // A newly picked service starts with one variation. Existing
-                // sections are kept as they are, keyed by service, so
-                // deselecting and reselecting does not throw away the work.
-                variationsByService: Object.fromEntries(
-                  next.map((id) => [
-                    id,
-                    f.variationsByService[id] ?? [emptyVariation()],
-                  ]),
-                ),
-              }))
+          <Input
+            id="asinCount"
+            type="number"
+            min={1}
+            max={50}
+            className="w-24"
+            value={form.asins.length}
+            onChange={(e) => {
+              const wanted = Math.max(1, Math.min(50, Number(e.target.value) || 1))
+              setForm((f) => {
+                if (wanted === f.asins.length) return f
+                // Growing adds empty sections; shrinking drops from the end,
+                // so the work already entered in earlier sections survives.
+                const asins =
+                  wanted > f.asins.length
+                    ? [
+                        ...f.asins,
+                        ...Array.from({ length: wanted - f.asins.length }, () => emptyAsin()),
+                      ]
+                    : f.asins.slice(0, wanted)
+                return { ...f, asins }
+              })
               setErrors({})
               setDuplicateAck(false)
             }}
           />
         </Field>
 
-        {/*
-          One section per selected service. This is the whole point of the
-          multi-select: a client taking Basic A+ and Listing Images needs
-          different complexity and different revision counts for each.
-        */}
-        {form.serviceIds.map((serviceId, index) => {
-          const service = services.find((s) => s.id === serviceId)
-          if (!service) return null
-          const rows = form.variationsByService[serviceId] ?? []
+        <div className="space-y-4">
+          {form.asins.map((asin, index) => (
+            <AsinSection
+              key={asin.key}
+              index={index}
+              value={asin}
+              services={services}
+              serviceOptions={serviceOptions}
+              brandId={brandId}
+              allowance={selectedAgency?.freeRevisionAllowance}
+              removable={form.asins.length > 1}
+              onRemove={() => {
+                setForm((f) => ({ ...f, asins: f.asins.filter((a) => a.key !== asin.key) }))
+                setErrors({})
+                setDuplicateAck(false)
+              }}
+              onChange={(next) => {
+                setForm((f) => ({
+                  ...f,
+                  asins: f.asins.map((a) => (a.key === asin.key ? next : a)),
+                }))
+                setErrors({})
+                setDuplicateAck(false)
+              }}
+              errors={Object.fromEntries(
+                Object.entries(errors)
+                  .filter(([k]) => k.startsWith(`a${index}.`))
+                  .map(([k, v]) => [k.slice(`a${index}.`.length), v]),
+              )}
+            />
+          ))}
+        </div>
 
-          return (
-            <div
-              key={serviceId}
-              // Spacing separates the sections rather than a rule. With a
-              // heading, a label row and a hairline the block was mostly chrome.
-              className={cn(index > 0 && 'pt-5')}
-            >
-              <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2">
-                <span className="text-dense font-medium">{service.name}</span>
-                {service.isBundle && (
-                  <span className="border-rule text-ink-muted rounded-sm border px-1 text-micro">
-                    bundle
-                  </span>
-                )}
-                {service.isBundle && (
-                  <span className="text-ink-muted text-micro">
-                    {service.components.map((c) => c.name).join(' + ')}
-                  </span>
-                )}
-              </div>
-
-              <VariationRows
-                variations={rows}
-                onChange={(next) => {
-                  setForm((f) => ({
-                    ...f,
-                    variationsByService: { ...f.variationsByService, [serviceId]: next },
-                  }))
-                  setErrors({})
-                  setDuplicateAck(false)
-                }}
-                allowance={selectedAgency?.freeRevisionAllowance}
-                // Errors are namespaced per service, so two sections cannot
-                // light each other's fields up.
-                errors={Object.fromEntries(
-                  Object.entries(errors)
-                    .filter(([k]) => k.startsWith(`${serviceId}.`))
-                    .map(([k, v]) => [k.slice(serviceId.length + 1), v]),
-                )}
-              />
-            </div>
-          )
-        })}
-
-        {form.serviceIds.length > 1 && (
+        {rowCount > 1 && (
           <p className="text-ink-muted text-micro">
-            Saving creates {form.serviceIds.length} ledger rows, one per service, linked as
-            one delivery. That keeps the delivered count and the service mix exact.
+            Saving creates {rowCount} ledger rows — one per service per ASIN — linked as one
+            delivery. That is what keeps the delivered count and the service mix exact.
           </p>
         )}
       </Band>

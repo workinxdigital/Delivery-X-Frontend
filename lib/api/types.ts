@@ -45,6 +45,8 @@ export type Task = {
   agencyType: 'AGENCY' | 'DIRECT'
   brandId: string
   brandName: string
+  asinId: string | null
+  asinCode: string | null
   serviceId: string
   serviceName: string
   serviceCategory: string
@@ -142,15 +144,25 @@ export type DeliveryLinePayload = {
   variations: VariationPayload[]
 }
 
+/** One product listing and everything shipped for it. */
+export type AsinPayload = {
+  /** Optional: a delivery with no code simply has no ASIN attached. */
+  code?: string | null
+  lines: DeliveryLinePayload[]
+}
+
 export type CreateTaskPayload = {
   agencyId: string
   brandName: string
   /**
-   * One or more services. Each becomes its own ledger row sharing a delivery
-   * group, because one row per delivered service is what keeps the delivered
-   * count and the service mix exact.
+   * The ASINs this job covered, each with its own services. Every ASIN-service
+   * pair becomes its own ledger row sharing a delivery group, because one row
+   * per delivered service per product is what keeps the delivered count and the
+   * service mix exact.
    */
-  lines: DeliveryLinePayload[]
+  asins?: AsinPayload[]
+  /** Older shape: services with no ASIN level. One of the two is required. */
+  lines?: DeliveryLinePayload[]
   title?: string | null
   deliveredOn: string
   deliveredById: string

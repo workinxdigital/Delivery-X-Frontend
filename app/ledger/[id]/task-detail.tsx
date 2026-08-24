@@ -121,6 +121,13 @@ export function TaskDetailView({ id }: { id: string }) {
       {editing && <EditTask task={task} onDone={() => setEditing(false)} />}
 
       <dl className="divide-rule grid divide-y">
+        <Detail label="ASIN">
+          {task.asinCode ? (
+            <span className="code">{task.asinCode}</span>
+          ) : (
+            <span className="text-ink-faint">not recorded</span>
+          )}
+        </Detail>
         <Detail label="Service">
           {task.serviceName}
           {task.isBundle && (
@@ -186,9 +193,9 @@ export function TaskDetailView({ id }: { id: string }) {
 /**
  * The other services delivered in the same job.
  *
- * One submission covering three services becomes three rows, which keeps the
- * delivered count and the service mix exact. This is what puts the job back
- * together for someone reading one of those rows.
+ * One submission covering three ASINs and two services becomes six rows, which
+ * keeps the delivered count and the service mix exact. This is what puts the job
+ * back together for someone reading one of those rows.
  */
 function SameDelivery({
   task,
@@ -217,6 +224,12 @@ function SameDelivery({
               className="text-dense hover:text-ink text-ink-muted transition-colors duration-[120ms]"
             >
               <span className="code">{s.taskCode}</span> {s.serviceName}
+              {/* Which product it was for — a job now spans ASINs as well as
+                  services, so the service name alone no longer identifies a
+                  sibling row. */}
+              {s.asinCode && (
+                <span className="text-ink-faint"> · {s.asinCode}</span>
+              )}
             </Link>
           </li>
         ))}
