@@ -90,9 +90,17 @@ export function AgenciesPanel() {
   })
 
   const remove = useMutation({
-    mutationFn: (id: string) => deleteAgency(id),
+    mutationFn: ({ id, force }: { id: string; force: boolean }) => deleteAgency(id, force),
     onSuccess: (r) => {
-      toast(`${r.removed.name} deleted`)
+      // Say what actually went, not just that something did — a forced delete
+      // takes deliveries with it and that should never be a surprise.
+      const also = [
+        r.removed.tasksRemoved > 0 ? `${r.removed.tasksRemoved} deliveries` : null,
+        r.removed.brandsRemoved > 0 ? `${r.removed.brandsRemoved} brands` : null,
+      ].filter(Boolean)
+      toast(`${r.removed.name} deleted`, {
+        description: also.length > 0 ? `Also removed: ${also.join(' and ')}` : undefined,
+      })
       refresh()
     },
     onError,
@@ -258,30 +266,28 @@ export function AgenciesPanel() {
                 </Td>
                 <Td align="right" control>
                   {/*
-                    An agency with deliveries cannot be deleted: those records
-                    would point at something this screen says is gone. The API
-                    refuses it too (409 AGENCY_IN_USE) — this is the explanation,
-                    not the enforcement.
-
-                    Said in words rather than as a greyed-out button with a
-                    tooltip. A disabled control tells you that you cannot do
-                    something but not why, and on a touch screen there is no
-                    hover to reveal the reason at all.
+                    Delete is always offered, and confirming says what it takes
+                    with it: an agency's deliveries cannot stay in the ledger
+                    naming something this screen says is gone, so they go too.
+                    Everything is soft-deleted, so it is recoverable in the
+                    database rather than destroyed.
                   */}
-                  {a.taskCount > 0 ? (
-                    <span
-                      className="text-ink-faint text-micro"
-                      title={`${a.taskCount} deliveries reference this agency, so its history has to stay readable.`}
-                    >
-                      In use · set Inactive
-                    </span>
-                  ) : confirming === a.id ? (
-                    <span className="inline-flex items-center gap-1">
+                  {confirming === a.id ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      {a.taskCount > 0 && (
+                        <span className="text-beyond text-micro">
+                          Takes {a.taskCount} deliver{a.taskCount === 1 ? 'y' : 'ies'}
+                          {a.brandCount > 0 &&
+                            ` and ${a.brandCount} brand${a.brandCount === 1 ? '' : 's'}`}{' '}
+                          with it.
+                        </span>
+                      )}
                       <GhostButton
                         danger
                         disabled={remove.isPending}
                         onClick={() => {
-                          remove.mutate(a.id)
+                          // force only when there is history to take along.
+                          remove.mutate({ id: a.id, force: a.taskCount > 0 })
                           setConfirming(null)
                         }}
                       >

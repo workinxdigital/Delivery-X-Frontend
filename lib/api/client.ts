@@ -227,9 +227,19 @@ export const updateAgency = (id: string, payload: Partial<AdminAgency>) =>
     body: JSON.stringify(payload),
   })
 
-export const deleteAgency = (id: string) =>
-  apiFetch<{ removed: { id: string; name: string } }>(`/admin/agencies/${id}`, {
+/**
+ * `force` takes the agency's deliveries and brands with it.
+ *
+ * Without it the API refuses to remove an agency that has deliveries, since
+ * they would be left naming something the admin screen says is gone. Everything
+ * is soft-deleted either way, so a forced delete is recoverable in the database.
+ */
+export const deleteAgency = (id: string, force = false) =>
+  apiFetch<{
+    removed: { id: string; name: string; tasksRemoved: number; brandsRemoved: number }
+  }>(`/admin/agencies/${id}`, {
     method: 'DELETE',
+    body: JSON.stringify({ force }),
   })
 
 export const getAdminServices = () =>

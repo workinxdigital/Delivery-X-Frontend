@@ -12,7 +12,6 @@ const LINKS = [
   { href: '/log', label: 'Log a delivery' },
   { href: '/ledger', label: 'Ledger' },
   { href: '/admin', label: 'Admin', adminOnly: true },
-  { href: '/', label: 'Status' },
 ]
 
 export function Nav() {

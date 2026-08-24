@@ -5,12 +5,18 @@ import { isAdmin, useSession } from '@/components/session'
 import { cn } from '@/lib/utils'
 import { AgenciesPanel } from './agencies-panel'
 import { ServicesPanel } from './services-panel'
-import { UsersPanel } from './users-panel'
 
+/**
+ * People is deliberately absent.
+ *
+ * Accounts are managed outside this screen: everyone changes their own password
+ * on /account, and a new account or a reset is done with `npm run set-password`
+ * in the API project. The four accounts are fixed and rarely change, so a whole
+ * admin panel for them was more surface than the job needed.
+ */
 const TABS = [
   { key: 'agencies', label: 'Agencies' },
   { key: 'services', label: 'Services' },
-  { key: 'users', label: 'People' },
 ] as const
 
 /**
@@ -33,7 +39,7 @@ export function AdminScreen() {
         <p className="text-ink-muted mt-2 text-dense">
           This section needs admin or owner access. You are signed in as{' '}
           {user?.role.toLowerCase()}, so nothing here is available to you. Ask an admin
-          if you need a change to the agencies, the service catalogue or the people list.
+          if you need a change to the agencies or the service catalogue.
         </p>
       </div>
     )
@@ -69,7 +75,6 @@ export function AdminScreen() {
 
       {tab === 'agencies' && <AgenciesPanel />}
       {tab === 'services' && <ServicesPanel />}
-      {tab === 'users' && <UsersPanel />}
     </div>
   )
 }
