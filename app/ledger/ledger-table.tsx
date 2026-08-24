@@ -19,7 +19,8 @@ const COLUMNS: {
   label: string
   align?: 'right'
   sort?: SortKey
-  className?: string
+  /** Right padding so a header lands over its column's numbers, not the gutter. */
+  headPad?: string
 }[] = [
   { key: 'code', label: 'Code', sort: 'taskCode' },
   { key: 'delivered', label: 'Delivered', sort: 'deliveredOn' },
@@ -27,7 +28,7 @@ const COLUMNS: {
   { key: 'agency', label: 'Agency' },
   { key: 'service', label: 'Service' },
   { key: 'variations', label: 'Variations', sort: 'variationCount' },
-  { key: 'revisions', label: 'Revisions', align: 'right' },
+  { key: 'revisions', label: 'Revisions', align: 'right', headPad: '2.25rem' },
   { key: 'by', label: 'Delivered by' },
 ]
 
@@ -102,6 +103,7 @@ export function LedgerTable() {
                 <Th
                   key={col.key}
                   align={col.align}
+                  headPad={col.headPad}
                   sortable={Boolean(col.sort)}
                   active={filters.sort === col.sort}
                   dir={filters.dir}
@@ -238,20 +240,29 @@ function Row({ task }: { task: Task }) {
         {mix.label && <span className="text-ink-muted"> · {mix.label}</span>}
       </Td>
 
+      {/*
+        Two fixed tracks rather than one right-aligned cell.
+        Right-aligning the whole cell meant a lone "0" hugged the cell edge while
+        a "7" got pushed left by the badge beside it, so the counts zigzagged
+        down the column. Each track now holds one thing at one x position, and
+        the badge track is reserved whether or not there is a badge.
+      */}
       <Td align="right" className="whitespace-nowrap">
-        {task.revisionRoundCount === 0 ? (
-          <span className="text-ink-faint">0</span>
-        ) : (
-          <>
+        <span className="inline-grid grid-cols-[2.5ch_2.25rem] items-baseline gap-1.5">
+          <span
+            className={cn('text-right', task.revisionRoundCount === 0 && 'text-ink-faint')}
+          >
             {task.revisionRoundCount}
-            {/*
-              The only colour in the product, and it means one thing: rounds past
-              the allowance (§2.6). Two readings exist, so the larger is shown
-              and the tooltip spells both out. A count, never a charge.
-            */}
+          </span>
+
+          {/*
+            The only colour in the product, and it means one thing: rounds past
+            the allowance (§2.6). Two readings exist, so the larger is shown and
+            the tooltip spells both out. A count, never a charge.
+          */}
+          <span className="text-beyond text-left font-medium">
             {beyond > 0 && (
               <span
-                className="text-beyond ml-1.5 font-medium"
                 title={
                   `Allowance ${task.freeRevisionAllowanceSnapshot} when logged. ` +
                   `${task.roundsBeyondAllowancePerVariation} beyond counting each variation separately, ` +
@@ -261,8 +272,8 @@ function Row({ task }: { task: Task }) {
                 +{beyond}
               </span>
             )}
-          </>
-        )}
+          </span>
+        </span>
       </Td>
 
       <Td className="text-ink-muted max-w-[14ch] truncate whitespace-nowrap">
@@ -287,6 +298,7 @@ function Row({ task }: { task: Task }) {
 function Th({
   children,
   align,
+  headPad,
   sortable,
   active,
   dir,
@@ -294,6 +306,7 @@ function Th({
 }: {
   children: React.ReactNode
   align?: 'right'
+  headPad?: string
   sortable?: boolean
   active?: boolean
   dir?: 'asc' | 'desc'
@@ -325,6 +338,7 @@ function Th({
     <th
       scope="col"
       aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : undefined}
+      style={headPad ? { paddingRight: `calc(0.5rem + ${headPad})` } : undefined}
       className={cn(
         'px-2 pt-1 pb-2 text-micro font-medium whitespace-nowrap',
         active ? 'text-ink' : 'text-ink-muted',
