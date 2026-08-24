@@ -94,11 +94,18 @@ export function Nav() {
         <div className="ml-auto flex items-center gap-3 py-3">
           {user ? (
             <>
-              <span className="hidden text-right leading-tight sm:block">
+              {/* Your own name is the way into your own account. */}
+              <Link
+                href="/account"
+                className={cn(
+                  'hidden rounded-md px-2 py-1 text-right leading-tight transition-colors duration-[120ms] sm:block',
+                  pathname.startsWith('/account') ? 'bg-wash' : 'hover:bg-wash',
+                )}
+              >
                 <span className="text-ink block text-dense">{user.name}</span>
                 {/* The role decides what is reachable, so it is worth stating. */}
                 <span className="eyebrow text-ink-muted block">{user.role}</span>
-              </span>
+              </Link>
               <button
                 type="button"
                 onClick={() => logout.mutate()}

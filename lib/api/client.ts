@@ -187,6 +187,13 @@ export const loginRequest = (email: string, password: string) =>
 
 export const logoutRequest = () => apiFetch<{ ok: true }>('/auth/logout', { method: 'POST' })
 
+/** Change your own password. Any role; the current password is required. */
+export const changePassword = (currentPassword: string, newPassword: string) =>
+  apiFetch<{ ok: true; otherSessionsEnded: number }>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  })
+
 /** Throws ApiError with status 401 when there is no session. */
 export const getMe = () => apiFetch<{ user: SessionUser }>('/auth/me').then((r) => r.user)
 
