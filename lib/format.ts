@@ -53,3 +53,30 @@ export const STATUS_LABELS = {
   REVISION_IN_PROGRESS: 'In revision',
   CLOSED: 'Closed',
 } as const
+
+/**
+ * Collapse a delivery's variation complexities into something scannable.
+ *
+ * Seven variations all at High rendered as "High + High + High + High + High +
+ * High + High", which wrecked the ledger's column widths and said nothing the
+ * variation count did not already say. This returns unique tiers instead, in
+ * severity order rather than variation order so the column reads consistently
+ * down the page, plus a full breakdown for the tooltip.
+ */
+export function summarizeComplexities(list: (keyof typeof COMPLEXITY_LABELS)[]): {
+  label: string
+  detail: string
+} {
+  if (list.length === 0) return { label: '', detail: '' }
+
+  const counts = new Map<keyof typeof COMPLEXITY_LABELS, number>()
+  for (const c of list) counts.set(c, (counts.get(c) ?? 0) + 1)
+
+  const order = ['LOW', 'MEDIUM', 'HIGH', 'STANDALONE'] as const
+  const present = order.filter((c) => counts.has(c))
+
+  return {
+    label: present.map((c) => COMPLEXITY_LABELS[c]).join(' + '),
+    detail: present.map((c) => `${counts.get(c)} × ${COMPLEXITY_LABELS[c]}`).join(', '),
+  }
+}
