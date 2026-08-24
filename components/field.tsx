@@ -66,7 +66,19 @@ export function Band({
 }) {
   return (
     <section className={cn('grid gap-x-6 gap-y-4 sm:grid-cols-[9rem_1fr]', className)}>
-      <h2 className="text-small text-ink-muted pt-1.5 font-medium">{title}</h2>
+      {/*
+        A brand eyebrow rather than a grey sub-heading: uppercase, tracked, with
+        a lime mark beside it. Lime is WorkinX's identity colour and its stated
+        job is exactly this — eyebrows and marks — while being useless as text
+        on paper, where it has almost no contrast. So it fills a shape and the
+        label stays ink.
+      */}
+      <h2 className="flex items-center gap-2 pt-1.5">
+        <span aria-hidden className="bg-lime h-3 w-1 shrink-0 rounded-full" />
+        <span className="text-micro text-ink-muted font-medium tracking-[0.08em] uppercase">
+          {title}
+        </span>
+      </h2>
       <div className="space-y-4">{children}</div>
     </section>
   )

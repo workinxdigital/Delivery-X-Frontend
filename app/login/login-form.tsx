@@ -64,7 +64,7 @@ export function LoginForm() {
           />
         </div>
 
-        <div className="border-rule bg-surface rounded-lg border p-6 shadow-[0_1px_2px_rgba(22,20,19,0.04)]">
+        <div className="border-rule bg-surface shadow-raised rounded-2xl border p-7">
           <h1 className="display text-[1.375rem] font-semibold">Sign in</h1>
           <p className="text-ink-muted mt-1 text-dense">
             Internal delivery log for WorkinX Digital.
@@ -128,8 +128,8 @@ export function LoginForm() {
         </div>
 
         <p className="text-ink-faint mt-5 text-micro">
-          No password? An admin can set one from the People panel, or run{' '}
-          <span className="code">npm run set-password</span> in the API project.
+          No password? Run <span className="code">npm run set-password</span> in the API
+          project to set one.
         </p>
       </div>
     </div>

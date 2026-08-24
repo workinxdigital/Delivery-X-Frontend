@@ -70,7 +70,7 @@ export function AsinSection({
   removable: boolean
 }) {
   return (
-    <div className="border-rule rounded-lg border p-4">
+    <div className="border-rule bg-surface shadow-card rounded-xl border p-4">
       <div className="mb-3 flex items-start gap-4">
         <div className="grid grow gap-4 sm:grid-cols-2">
           <Field

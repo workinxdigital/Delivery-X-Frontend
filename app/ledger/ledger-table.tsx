@@ -119,7 +119,12 @@ export function LedgerTable() {
         what a register looks like. overflow-x-auto is a safety net for narrow
         screens, not the normal case: the column set is chosen to fit.
       */}
-      <div className="-mx-2 overflow-x-auto px-2">
+      {/*
+        The table sits on its own surface now. Bare rows on the page background
+        with only hairlines between them read as a wireframe of a table rather
+        than a table — a register is a thing on the desk, not marks on it.
+      */}
+      <div className="border-rule bg-surface shadow-card overflow-x-auto rounded-xl border">
         <table className="w-full border-collapse text-dense">
           <thead>
             {/*
@@ -131,7 +136,7 @@ export function LedgerTable() {
               buys, so the page scrolls normally and the page size is kept small
               enough that the header stays within reach.
             */}
-            <tr className="border-rule-strong border-b">
+            <tr className="border-rule bg-wash/60 border-b">
               {COLUMNS.map((col) => (
                 <Th
                   key={col.key}
@@ -242,7 +247,7 @@ function Row({
   const noteish = task.title ?? task.notes
 
   return (
-    <tr className="border-rule hover:bg-wash group border-b transition-colors duration-[120ms]">
+    <tr className="border-rule hover:bg-wash group border-b transition-colors duration-[120ms] last:border-0">
       <Td className="whitespace-nowrap">
         <Link
           href={`/ledger/${task.id}`}
@@ -436,7 +441,7 @@ function Th({
       aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : undefined}
       style={headPad ? { paddingRight: `calc(0.5rem + ${headPad})` } : undefined}
       className={cn(
-        'px-2 pt-1 pb-2 text-micro font-medium whitespace-nowrap',
+        'px-3 py-2.5 text-micro font-medium tracking-[0.06em] uppercase whitespace-nowrap',
         active ? 'text-ink' : 'text-ink-muted',
         align === 'right' ? 'text-right' : 'text-left',
       )}
@@ -471,7 +476,7 @@ function Td({
     <td
       title={title}
       className={cn(
-        'px-2 py-2.5 align-middle',
+        'px-3 py-3 align-middle',
         align === 'right' && 'text-right',
         className,
       )}

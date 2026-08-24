@@ -155,7 +155,7 @@ export function Combobox({
           }
         }}
         className={cn(
-          'border-control bg-surface text-dense flex h-9 w-full items-center justify-between rounded-md border px-2.5 transition-colors duration-[120ms]',
+          'border-control bg-surface text-dense flex h-10 w-full items-center justify-between rounded-lg border px-3 transition-colors duration-[120ms]',
           'hover:border-ink-muted disabled:cursor-not-allowed disabled:opacity-50',
           !selected && 'text-ink-muted',
           invalid && 'border-danger',
