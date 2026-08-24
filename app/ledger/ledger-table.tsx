@@ -28,7 +28,7 @@ const COLUMNS: {
   { key: 'agency', label: 'Agency' },
   { key: 'service', label: 'Service' },
   { key: 'variations', label: 'Variations', sort: 'variationCount' },
-  { key: 'revisions', label: 'Revisions', align: 'right', headPad: '2.25rem' },
+  { key: 'revisions', label: 'Revisions', sort: undefined },
   { key: 'by', label: 'Delivered by' },
 ]
 
@@ -241,16 +241,20 @@ function Row({ task }: { task: Task }) {
       </Td>
 
       {/*
-        Two fixed tracks rather than one right-aligned cell.
-        Right-aligning the whole cell meant a lone "0" hugged the cell edge while
-        a "7" got pushed left by the badge beside it, so the counts zigzagged
-        down the column. Each track now holds one thing at one x position, and
-        the badge track is reserved whether or not there is a badge.
+        Left aligned, with two fixed tracks.
+        The count sits flush with the column header, and the badge track after it
+        is reserved whether or not there is a badge. That keeps every count and
+        every badge on its own single x position: right-aligning the cell instead
+        made a lone "0" hug the cell edge while a "7" was pushed left by the badge
+        beside it, so the counts zigzagged down the column.
+
+        Figures are tabular globally, so a 1-digit and a 2-digit count still start
+        at the same x.
       */}
-      <Td align="right" className="whitespace-nowrap">
+      <Td className="whitespace-nowrap">
         <span className="inline-grid grid-cols-[2.5ch_2.25rem] items-baseline gap-1.5">
           <span
-            className={cn('text-right', task.revisionRoundCount === 0 && 'text-ink-faint')}
+            className={cn('text-left', task.revisionRoundCount === 0 && 'text-ink-faint')}
           >
             {task.revisionRoundCount}
           </span>
