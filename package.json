@@ -2,9 +2,9 @@
   "name": "deliverx-web",
   "version": "0.1.0",
   "private": true,
-  "description": "DeliverX web app — delivery log UI for WorkinX Digital. Talks to deliverx-api over HTTP; never connects to Postgres.",
+  "description": "DeliverX web app \u2014 delivery log UI for WorkinX Digital. Talks to deliverx-api over HTTP; never connects to Postgres.",
   "engines": {
-    "node": ">=22"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "next dev --port 3000",
@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
-    "@types/node": "^22.13.1",
+    "@types/node": "^24.9.2",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "tailwindcss": "^4.0.0",
