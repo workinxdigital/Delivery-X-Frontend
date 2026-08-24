@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { parseAsinCodes, parseAsinCsv } from '@/lib/bulk-asins'
+import { buildCsvTemplate, parseAsinCodes, parseAsinCsv } from '@/lib/bulk-asins'
 import type { Complexity, Service } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 
@@ -136,6 +136,29 @@ export function BulkAsins({
             }}
             className="text-dense file:border-control file:bg-paper file:text-ink file:mr-3 file:rounded-md file:border file:px-3 file:py-1.5 file:text-micro"
           />
+          <button
+            type="button"
+            onClick={() => {
+              /*
+               * Built in the browser from the live catalogue rather than served
+               * as a static file, so the service names in it are always the
+               * ones this instance will actually accept.
+               */
+              const blob = new Blob([buildCsvTemplate(services)], {
+                type: 'text/csv;charset=utf-8',
+              })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = 'deliverx-asin-template.csv'
+              a.click()
+              URL.revokeObjectURL(url)
+            }}
+            className="text-ink-muted hover:text-ink mt-2 block text-micro underline decoration-dotted underline-offset-2"
+          >
+            Download a template with your service names
+          </button>
+
           <p className="text-ink-faint mt-2 text-micro">
             Header row naming <span className="code">asin</span>,{' '}
             <span className="code">service</span>, and optionally{' '}

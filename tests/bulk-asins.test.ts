@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseAsinCodes, parseAsinCsv } from '@/lib/bulk-asins'
+import { buildCsvTemplate, parseAsinCodes, parseAsinCsv } from '@/lib/bulk-asins'
 
 const SERVICES = [
   { id: 'svc-basic', name: 'Basic A+', code: 'BASIC_A_PLUS' },
@@ -145,5 +145,24 @@ describe('parseAsinCsv', () => {
     expect(out.problems).toEqual([])
     expect(out.asins).toHaveLength(120)
     expect(out.rowCount).toBe(120)
+  })
+})
+
+describe('buildCsvTemplate', () => {
+  it('uses the real service names, so a copied row matches the catalogue', () => {
+    const csv = buildCsvTemplate(SERVICES)
+    expect(csv.split('\n')[0]).toBe('asin,service,complexity,revisions')
+    expect(csv).toContain('Video — Product Demo')
+  })
+
+  it('quotes a service name containing a comma', () => {
+    expect(buildCsvTemplate([{ name: 'A+, Premium' }])).toContain('"A+, Premium"')
+  })
+
+  it('round-trips: its own output parses with no problems', () => {
+    const csv = buildCsvTemplate(SERVICES)
+    const parsed = parseAsinCsv(csv, SERVICES)
+    expect(parsed.problems).toEqual([])
+    expect(parsed.asins).toHaveLength(3)
   })
 })

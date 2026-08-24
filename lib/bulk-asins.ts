@@ -215,3 +215,29 @@ function splitCsvLine(line: string): string[] {
   out.push(cur)
   return out
 }
+
+/**
+ * A template sheet, filled with this catalogue's real service names.
+ *
+ * The CSV path is only as good as the person's guess at the format, and the
+ * easiest thing to get wrong is a service name — "Video - Product Demo" with a
+ * hyphen does not match "Video — Product Demo" with an em dash, and the row is
+ * rejected for a reason that looks like nothing. Handing over a sheet that
+ * already contains the exact names removes that whole class of problem.
+ *
+ * The example rows use real services and are commented in the last column so
+ * they are obviously examples to delete rather than data to keep.
+ */
+export function buildCsvTemplate(services: { name: string }[]): string {
+  const names = services.slice(0, 3).map((s) => s.name)
+  const rows = [
+    'asin,service,complexity,revisions',
+    ...names.map((name, i) => `B00EXAMPLE${i + 1},${csvCell(name)},${['LOW', 'MEDIUM', 'HIGH'][i] ?? 'MEDIUM'},${i}`),
+  ]
+  return rows.join('\n') + '\n'
+}
+
+/** Quote a cell if it contains a comma or a quote, as a spreadsheet would. */
+function csvCell(value: string): string {
+  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
+}
