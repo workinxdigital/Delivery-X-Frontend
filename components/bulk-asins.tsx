@@ -38,7 +38,24 @@ export function BulkAsins({
   const [pasted, setPasted] = useState('')
   const [problems, setProblems] = useState<string[]>([])
   const [note, setNote] = useState<string | null>(null)
+  /** The chosen file's name, kept so it can be shown and cleared. */
+  const [fileName, setFileName] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  /**
+   * Put the upload back to empty.
+   *
+   * A rejected file otherwise sits there with its errors and no way to take it
+   * back — the only escape being to upload something else, which is not the
+   * same thing as changing your mind. Clears the input itself too, so choosing
+   * the same file again still fires a change event.
+   */
+  function clearFile() {
+    setFileName(null)
+    setProblems([])
+    setNote(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
 
   const preview = open === 'paste' ? parseAsinCodes(pasted) : null
 
@@ -81,7 +98,6 @@ export function BulkAsins({
           : '. Check the sections below before saving.'),
     )
     setOpen(null)
-    if (fileRef.current) fileRef.current.value = ''
   }
 
   return (
@@ -132,10 +148,23 @@ export function BulkAsins({
             accept=".csv,text/csv,text/plain"
             onChange={(e) => {
               const file = e.target.files?.[0]
-              if (file) void applyCsv(file)
+              if (file) {
+                setFileName(file.name)
+                void applyCsv(file)
+              }
             }}
             className="text-dense file:border-control file:bg-paper file:text-ink file:mr-3 file:rounded-md file:border file:px-3 file:py-1.5 file:text-micro"
           />
+          {fileName && (
+            <button
+              type="button"
+              onClick={clearFile}
+              className="text-ink-muted hover:text-beyond mt-2 block text-micro transition-colors duration-[120ms]"
+            >
+              Remove {fileName}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {

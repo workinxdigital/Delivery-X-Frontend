@@ -101,11 +101,28 @@ export function parseAsinCsv(
   }
 
   if (col.asin === -1 || col.service === -1) {
+    /*
+     * Say what was found, not only what was wanted.
+     *
+     * "The first row must be a header naming asin and service" leaves someone
+     * staring at a file that, to them, obviously does have those columns —
+     * under different names. Echoing the headers actually read turns it into a
+     * mapping problem they can see and fix, or send on to be supported.
+     */
+    const found = header.filter(Boolean)
+    const missing = [col.asin === -1 ? 'asin' : null, col.service === -1 ? 'service' : null]
+      .filter(Boolean)
+      .join(' and ')
+
     return {
       asins: [],
       rowCount: 0,
       problems: [
-        'The first row must be a header naming at least "asin" and "service". Optional: "complexity", "revisions".',
+        `Could not find a column for ${missing}.`,
+        found.length > 0
+          ? `The first row of the file reads: ${found.map((h) => `"${h}"`).join(', ')}.`
+          : 'The first row of the file is empty.',
+        'Rename the columns to "asin" and "service" (also accepted: "sku" for asin), or send the header row over and it can be supported directly. Optional columns: "complexity", "revisions".',
       ],
     }
   }

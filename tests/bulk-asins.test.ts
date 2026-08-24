@@ -129,7 +129,20 @@ describe('parseAsinCsv', () => {
   it('refuses a file with no usable header instead of guessing', () => {
     const out = parseAsinCsv('B08N5WRWNW,Basic A+', SERVICES)
     expect(out.asins).toEqual([])
-    expect(out.problems[0]).toContain('header')
+    expect(out.problems[0]).toContain('Could not find a column')
+  })
+
+  it('echoes the headers it did find, so a rename is obvious', () => {
+    const out = parseAsinCsv('Asin Code,Deliverable,Tier\nB08N5WRWNW,Basic A+,LOW', SERVICES)
+    expect(out.asins).toEqual([])
+    expect(out.problems.join(' ')).toContain('"asin code"')
+    expect(out.problems.join(' ')).toContain('"deliverable"')
+  })
+
+  it('names which column is missing when only one is', () => {
+    const out = parseAsinCsv('asin,deliverable\nB08N5WRWNW,Basic A+', SERVICES)
+    expect(out.problems[0]).toContain('service')
+    expect(out.problems[0]).not.toContain('asin and')
   })
 
   it('says the file is empty rather than returning silence', () => {
