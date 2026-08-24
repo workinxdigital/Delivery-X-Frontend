@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { BrandInput } from '@/components/brand-input'
 import { Combobox, type ComboboxOption } from '@/components/combobox'
+import { MultiSelect, type MultiOption } from '@/components/multi-select'
 import { Band, Field } from '@/components/field'
 import {
   VariationRows,
@@ -30,8 +31,10 @@ const VARIATION_SOFT_LIMIT = 20
 type FormState = {
   agencyId: string
   brandName: string
-  serviceId: string
-  variations: VariationDraft[]
+  /** Order matters: it becomes the order of the sections and the saved rows. */
+  serviceIds: string[]
+  /** Keyed by serviceId, so deselecting and reselecting does not lose the work. */
+  variationsByService: Record<string, VariationDraft[]>
   deliveredOn: string
   deliveredById: string
   clickupTaskId: string
@@ -41,8 +44,8 @@ type FormState = {
 const EMPTY: FormState = {
   agencyId: '',
   brandName: '',
-  serviceId: '',
-  variations: [emptyVariation()],
+  serviceIds: [],
+  variationsByService: {},
   deliveredOn: todayInIST(),
   deliveredById: '',
   clickupTaskId: '',
@@ -80,7 +83,7 @@ export function LogDeliveryForm() {
     hint: `${a.type === 'AGENCY' ? 'Agency' : 'Direct'} · ${a.freeRevisionAllowance} free revision${a.freeRevisionAllowance === 1 ? '' : 's'}`,
   }))
 
-  const serviceOptions: ComboboxOption[] = services.map((s) => ({
+  const serviceOptions: MultiOption[] = services.map((s) => ({
     value: s.id,
     label: s.name,
     group: s.isBundle ? 'Bundles' : s.category,
@@ -96,15 +99,17 @@ export function LogDeliveryForm() {
   }))
 
   const selectedAgency = agencies.find((a) => a.id === form.agencyId)
-  const selectedService = services.find((s) => s.id === form.serviceId)
 
   // Only ask about duplicates once every identifying field is filled in.
+  // Advisory only, so checking the first service is enough to catch the
+  // accidental double-save this guards against (§5.1).
+  const firstService = form.serviceIds[0]
   const duplicateKey =
-    form.agencyId && form.brandName.trim() && form.serviceId
+    form.agencyId && form.brandName.trim() && firstService
       ? {
           agencyId: form.agencyId,
           brandName: form.brandName.trim(),
-          serviceId: form.serviceId,
+          serviceId: firstService,
           deliveredOn: form.deliveredOn,
         }
       : null
@@ -119,28 +124,30 @@ export function LogDeliveryForm() {
   const mutation = useMutation({
     mutationFn: createTask,
     onSuccess: (result) => {
-      const t = result.task
-      const parts = [
-        `${t.brandName} · ${t.serviceName}`,
-        `${t.variationCount} variation${t.variationCount === 1 ? '' : 's'}`,
+      const rows = result.tasks
+      // One submission can create several rows, so the toast names each one.
+      const title =
+        rows.length === 1
+          ? rows[0]!.taskCode
+          : `${rows.length} deliveries logged`
+      const description = [
+        rows[0]!.brandName,
+        ...rows.map(
+          (t) =>
+            `${t.taskCode} ${t.serviceName}` +
+            (t.revisionRoundCount > 0 ? ` (${t.revisionRoundCount} rev)` : ''),
+        ),
+        result.brandCreated ? 'new brand' : null,
       ]
-      if (t.revisionRoundCount > 0) {
-        parts.push(
-          `${t.revisionRoundCount} revision${t.revisionRoundCount === 1 ? '' : 's'}` +
-            (t.roundsBeyondAllowancePerVariation > 0 || t.roundsBeyondAllowancePerDelivery > 0
-              ? ` (${t.roundsBeyondAllowancePerVariation} beyond per variation, ${t.roundsBeyondAllowancePerDelivery} per delivery)`
-              : ''),
-        )
-      }
-      if (result.brandCreated) parts.push('new brand')
-      toast(t.taskCode, { description: parts.join(' · ') })
+        .filter(Boolean)
+        .join(' · ')
+      toast(title, { description })
       if (result.variationWarning) toast.warning(result.variationWarning)
 
       // Reset, but keep agency and brand: PMs log several for one brand in a
       // row, and retyping them is the main source of friction (§5.1).
       setForm((f) => ({
         ...EMPTY,
-        variations: [emptyVariation()],
         agencyId: f.agencyId,
         brandName: f.brandName,
         deliveredById: f.deliveredById,
@@ -168,12 +175,16 @@ export function LogDeliveryForm() {
     const next: Record<string, string> = {}
     if (!form.agencyId) next.agencyId = 'Pick an agency'
     if (!form.brandName.trim()) next.brandName = 'Enter a brand'
-    if (!form.serviceId) next.serviceId = 'Pick a service'
-    form.variations.forEach((v, i) => {
-      if (!v.complexity) next[`variations.${i}.complexity`] = 'Pick one'
-      const n = Number(v.revisionCount)
-      if (!Number.isInteger(n) || n < 0) next[`variations.${i}.revisionCount`] = '0 or more'
-    })
+    if (form.serviceIds.length === 0) next.serviceIds = 'Pick at least one service'
+    for (const serviceId of form.serviceIds) {
+      const rows = form.variationsByService[serviceId] ?? []
+      rows.forEach((v, i) => {
+        if (!v.complexity) next[`${serviceId}.variations.${i}.complexity`] = 'Pick one'
+        const n = Number(v.revisionCount)
+        if (!Number.isInteger(n) || n < 0)
+          next[`${serviceId}.variations.${i}.revisionCount`] = '0 or more'
+      })
+    }
     if (!form.deliveredOn) next.deliveredOn = 'Pick a date'
     else if (form.deliveredOn > todayInIST()) next.deliveredOn = 'Cannot be in the future'
     if (!form.deliveredById) next.deliveredById = 'Pick who delivered it'
@@ -190,10 +201,12 @@ export function LogDeliveryForm() {
     mutation.mutate({
       agencyId: form.agencyId,
       brandName: form.brandName.trim(),
-      serviceId: form.serviceId,
-      variations: form.variations.map((v) => ({
-        complexity: v.complexity as Complexity,
-        revisionCount: Number(v.revisionCount),
+      lines: form.serviceIds.map((serviceId) => ({
+        serviceId,
+        variations: (form.variationsByService[serviceId] ?? []).map((v) => ({
+          complexity: v.complexity as Complexity,
+          revisionCount: Number(v.revisionCount),
+        })),
       })),
       deliveredOn: form.deliveredOn,
       deliveredById: form.deliveredById,
@@ -259,44 +272,101 @@ export function LogDeliveryForm() {
 
       <Band title="What shipped" className="py-7">
         <Field
-          label="Service"
-          htmlFor="service"
-          error={errors.serviceId}
-          hint={
-            selectedService?.isBundle
-              ? selectedService.components.map((c) => c.name).join(' + ')
-              : undefined
-          }
+          label="Services"
+          htmlFor="services"
+          error={errors.serviceIds}
+          hint="Pick every service this job covered. Each one gets its own variations below."
         >
-          <Combobox
-            id="service"
+          <MultiSelect
+            id="services"
             options={serviceOptions}
-            value={form.serviceId}
-            invalid={Boolean(errors.serviceId)}
-            placeholder="Select"
+            values={form.serviceIds}
+            invalid={Boolean(errors.serviceIds)}
+            placeholder="Select one or more services"
             searchPlaceholder="Search the catalogue"
-            clearable={false}
-            onChange={(v) => set('serviceId', v)}
-          />
-        </Field>
-
-        <Field
-          label="Variations"
-          error={errors.variations}
-          hint="Each variation carries its own complexity and its own revision count."
-        >
-          <VariationRows
-            variations={form.variations}
             onChange={(next) => {
-              setForm((f) => ({ ...f, variations: next }))
+              setForm((f) => ({
+                ...f,
+                serviceIds: next,
+                // A newly picked service starts with one variation. Existing
+                // sections are kept as they are, keyed by service, so
+                // deselecting and reselecting does not throw away the work.
+                variationsByService: Object.fromEntries(
+                  next.map((id) => [
+                    id,
+                    f.variationsByService[id] ?? [emptyVariation()],
+                  ]),
+                ),
+              }))
               setErrors({})
               setDuplicateAck(false)
             }}
-            allowance={selectedAgency?.freeRevisionAllowance}
-            errors={errors}
           />
         </Field>
 
+        {/*
+          One section per selected service. This is the whole point of the
+          multi-select: a client taking Basic A+ and Listing Images needs
+          different complexity and different revision counts for each.
+        */}
+        {form.serviceIds.map((serviceId, index) => {
+          const service = services.find((s) => s.id === serviceId)
+          if (!service) return null
+          const rows = form.variationsByService[serviceId] ?? []
+
+          return (
+            <div
+              key={serviceId}
+              className={cn(
+                'border-rule pt-4',
+                // A rule between sections, but not above the first one: the
+                // field above it already provides the separation.
+                index > 0 && 'border-t',
+              )}
+            >
+              <div className="mb-2 flex flex-wrap items-baseline gap-x-2">
+                <span className="text-dense font-medium">{service.name}</span>
+                {service.isBundle && (
+                  <span className="border-rule text-ink-muted rounded-sm border px-1 text-micro">
+                    bundle
+                  </span>
+                )}
+                {service.isBundle && (
+                  <span className="text-ink-muted text-micro">
+                    {service.components.map((c) => c.name).join(' + ')}
+                  </span>
+                )}
+              </div>
+
+              <VariationRows
+                variations={rows}
+                onChange={(next) => {
+                  setForm((f) => ({
+                    ...f,
+                    variationsByService: { ...f.variationsByService, [serviceId]: next },
+                  }))
+                  setErrors({})
+                  setDuplicateAck(false)
+                }}
+                allowance={selectedAgency?.freeRevisionAllowance}
+                // Errors are namespaced per service, so two sections cannot
+                // light each other's fields up.
+                errors={Object.fromEntries(
+                  Object.entries(errors)
+                    .filter(([k]) => k.startsWith(`${serviceId}.`))
+                    .map(([k, v]) => [k.slice(serviceId.length + 1), v]),
+                )}
+              />
+            </div>
+          )
+        })}
+
+        {form.serviceIds.length > 1 && (
+          <p className="text-ink-muted text-micro">
+            Saving creates {form.serviceIds.length} ledger rows, one per service, linked as
+            one delivery. That keeps the delivered count and the service mix exact.
+          </p>
+        )}
       </Band>
 
       <Band title="When and who" className="py-7">

@@ -73,6 +73,8 @@ export type Task = {
   correctsTaskCode: string | null
   periodId: string | null
   periodStatus: 'OPEN' | 'LOCKED' | null
+  /** Shared by the rows created in one submission. Null when logged alone. */
+  deliveryGroupId: string | null
   notes: string | null
   createdAt: string
 }
@@ -132,12 +134,22 @@ export type VariationPayload = {
   notes?: string | null
 }
 
-export type CreateTaskPayload = {
-  agencyId: string
-  brandName: string
+/** One delivered service within a submission, with its own variations. */
+export type DeliveryLinePayload = {
   serviceId: string
   /** At least one. variationCount is derived from this, never typed separately. */
   variations: VariationPayload[]
+}
+
+export type CreateTaskPayload = {
+  agencyId: string
+  brandName: string
+  /**
+   * One or more services. Each becomes its own ledger row sharing a delivery
+   * group, because one row per delivered service is what keeps the delivered
+   * count and the service mix exact.
+   */
+  lines: DeliveryLinePayload[]
   title?: string | null
   deliveredOn: string
   deliveredById: string
@@ -146,7 +158,9 @@ export type CreateTaskPayload = {
 }
 
 export type CreateTaskResult = {
-  task: Task
+  /** One per delivered service. */
+  tasks: Task[]
+  deliveryGroupId: string | null
   /** True when the brand did not exist and was created by this save (§2.2). */
   brandCreated: boolean
   variationWarning: string | null
@@ -177,6 +191,8 @@ export type TaskFilters = {
   deliveredById?: string
   status?: TaskStatus
   edited?: 'yes' | 'no'
+  /** Fetch the other services delivered in the same job. */
+  deliveryGroupId?: string
   q?: string
   page?: number
   pageSize?: number

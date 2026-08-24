@@ -9,7 +9,13 @@ import { Combobox } from '@/components/combobox'
 import { Field } from '@/components/field'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ApiError, addRevisionRound, getRevisionReasons, getTask } from '@/lib/api/client'
+import {
+  ApiError,
+  addRevisionRound,
+  getRevisionReasons,
+  getTask,
+  getTasks,
+} from '@/lib/api/client'
 import type { TaskVariationDetail } from '@/lib/api/types'
 import { COMPLEXITY_LABELS, STATUS_LABELS, formatDateOnly, todayInIST } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -100,6 +106,8 @@ export function TaskDetailView({ id }: { id: string }) {
         {task.notes && <Detail label="Notes">{task.notes}</Detail>}
       </dl>
 
+      <SameDelivery task={task} />
+
       <AllowanceSummary task={task} />
 
       <section className="border-rule mt-10 border-t pt-6">
@@ -132,6 +140,48 @@ export function TaskDetailView({ id }: { id: string }) {
         </p>
       </section>
     </div>
+  )
+}
+
+/**
+ * The other services delivered in the same job.
+ *
+ * One submission covering three services becomes three rows, which keeps the
+ * delivered count and the service mix exact. This is what puts the job back
+ * together for someone reading one of those rows.
+ */
+function SameDelivery({
+  task,
+}: {
+  task: { id: string; deliveryGroupId: string | null }
+}) {
+  const { data } = useQuery({
+    queryKey: ['tasks', { deliveryGroupId: task.deliveryGroupId }],
+    queryFn: () => getTasks({ deliveryGroupId: task.deliveryGroupId! }),
+    enabled: Boolean(task.deliveryGroupId),
+  })
+
+  const siblings = (data?.tasks ?? []).filter((t) => t.id !== task.id)
+  if (siblings.length === 0) return null
+
+  return (
+    <section className="border-rule mt-8 border-t pt-4">
+      <h2 className="text-ink-muted text-micro font-medium">
+        Delivered in the same job
+      </h2>
+      <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+        {siblings.map((s) => (
+          <li key={s.id}>
+            <Link
+              href={`/ledger/${s.id}`}
+              className="text-dense hover:text-ink text-ink-muted transition-colors duration-[120ms]"
+            >
+              <span className="code">{s.taskCode}</span> {s.serviceName}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
