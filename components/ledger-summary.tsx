@@ -5,7 +5,7 @@ import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import { ComplexityPill } from '@/components/pill'
 import { getTaskSummary } from '@/lib/api/client'
-import type { TaskFilters } from '@/lib/api/types'
+import type { Complexity, TaskFilters } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 
 /**
@@ -15,10 +15,10 @@ import { cn } from '@/lib/utils'
  * from the rows on screen — the table pages at 25, and a total that quietly
  * described only the first page would be worse than no total at all.
  *
- * Three questions, which is why there are three groupings: how much shipped and
- * for whom, what shape the work was, and where the allowance was exceeded. That
- * last number is a count, never a charge (§2.6) — it says scope moved, and the
- * commercial consequence is decided outside this system.
+ * The design goal is one glance, not four readings. Bare columns of digits make
+ * you compare numbers in your head, so every row carries a bar showing its
+ * share: which agency dominates and which tier the work sits in are then shape,
+ * not arithmetic. The digits stay for when the exact figure matters.
  */
 export function LedgerSummary({ filters }: { filters: TaskFilters }) {
   const [open, setOpen] = useState(true)
@@ -31,15 +31,20 @@ export function LedgerSummary({ filters }: { filters: TaskFilters }) {
     queryFn: () => getTaskSummary(scope),
   })
 
-  const totals = data?.totals
+  const t = data?.totals
+  const byAgency = data?.byAgency ?? []
+  const byComplexity = sortTiers(data?.byComplexity ?? [])
+
+  const topAgency = Math.max(1, ...byAgency.map((a) => a.deliveries))
+  const topTier = Math.max(1, ...byComplexity.map((c) => c.variations))
 
   return (
-    <section className="border-rule bg-surface shadow-card mb-4 rounded-xl border">
+    <section className="border-rule bg-surface shadow-card mb-4 overflow-hidden rounded-xl border">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+        className="hover:bg-wash/50 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-[120ms]"
       >
         <span aria-hidden className="bg-lime h-3 w-1 shrink-0 rounded-full" />
         <span className="text-micro text-ink-muted font-medium tracking-[0.08em] uppercase">
@@ -57,93 +62,93 @@ export function LedgerSummary({ filters }: { filters: TaskFilters }) {
       </button>
 
       {open && (
-        <div className="border-rule border-t p-4">
-          {/* The four headline numbers, in the brand's card colours. */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Deliveries" value={totals?.deliveries} tone="bg-tier-2" />
-            <Stat label="Variations" value={totals?.variations} tone="bg-tier-3" />
-            <Stat label="Revision rounds" value={totals?.revisionRounds} tone="bg-tier-1" />
+        <div className="border-rule border-t">
+          {/*
+            The headline row. Numbers set large and tabular so they read as
+            figures rather than text, each with the one comparison that gives it
+            meaning underneath — a count with nothing to measure it against is
+            just a digit.
+          */}
+          <div className="divide-rule grid divide-y sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 sm:[&>*:not(:first-child)]:border-l">
+            <Stat
+              label="Deliveries"
+              value={t?.deliveries}
+              note={byAgency.length > 0 ? `${byAgency.length} agenc${byAgency.length === 1 ? 'y' : 'ies'}` : undefined}
+            />
+            <Stat
+              label="Variations"
+              value={t?.variations}
+              note={
+                t && t.deliveries > 0
+                  ? `${(t.variations / t.deliveries).toFixed(1)} per delivery`
+                  : undefined
+              }
+            />
+            <Stat
+              label="Revision rounds"
+              value={t?.revisionRounds}
+              note={
+                t && t.variations > 0
+                  ? `${(t.revisionRounds / t.variations).toFixed(1)} per variation`
+                  : undefined
+              }
+            />
             {/*
-              The only chromatic capsule in the product means rounds past the
-              allowance, so this tile borrows it rather than inventing a colour.
+              The one chromatic accent in the product means rounds past the
+              allowance, so this borrows it rather than inventing a colour — and
+              only when there are any. Zero beyond allowance is good news and
+              should not be painted as a warning.
             */}
             <Stat
-              label="Rounds beyond allowance"
-              value={totals?.roundsBeyondAllowance}
-              tone="bg-beyond-wash"
-              emphasis
+              label="Beyond allowance"
+              value={t?.roundsBeyondAllowance}
+              alarm={Boolean(t?.roundsBeyondAllowance)}
+              note={
+                t && t.revisionRounds > 0
+                  ? `${Math.round((t.roundsBeyondAllowance / t.revisionRounds) * 100)}% of all rounds`
+                  : undefined
+              }
             />
           </div>
 
-          <div className="mt-5 grid gap-6 lg:grid-cols-2">
-            <div>
-              <h3 className="text-ink-muted text-micro mb-2 font-medium tracking-[0.06em] uppercase">
-                Per agency
-              </h3>
-              <table className="w-full border-collapse text-dense">
-                <thead>
-                  <tr className="border-rule border-b">
-                    <Th>Agency</Th>
-                    <Th>Deliveries</Th>
-                    <Th>Variations</Th>
-                    <Th>Revisions</Th>
-                    <Th>Beyond</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data?.byAgency ?? []).map((row) => (
-                    <tr key={row.agencyId} className="border-rule border-b last:border-0">
-                      <Td className="font-medium">{row.agencyName}</Td>
-                      <Td className="tabular">{row.deliveries}</Td>
-                      <Td className="tabular">{row.variations}</Td>
-                      <Td className="tabular">{row.revisionRounds}</Td>
-                      <Td className={cn('tabular', row.roundsBeyondAllowance > 0 && 'text-beyond')}>
-                        {row.roundsBeyondAllowance}
-                      </Td>
-                    </tr>
-                  ))}
-                  {data?.byAgency.length === 0 && <Empty colSpan={5} />}
-                </tbody>
-              </table>
-            </div>
+          <div className="border-rule divide-rule grid border-t lg:grid-cols-2 lg:divide-x">
+            <Block title="Per agency" empty={byAgency.length === 0}>
+              {byAgency.map((row) => (
+                <Row
+                  key={row.agencyId}
+                  label={<span className="font-medium">{row.agencyName}</span>}
+                  primary={row.deliveries}
+                  share={row.deliveries / topAgency}
+                  barClass="bg-tier-2"
+                  secondary={[
+                    { label: 'variations', value: row.variations },
+                    { label: 'revisions', value: row.revisionRounds },
+                    { label: 'beyond', value: row.roundsBeyondAllowance, alarm: true },
+                  ]}
+                />
+              ))}
+            </Block>
 
-            <div>
-              <h3 className="text-ink-muted text-micro mb-2 font-medium tracking-[0.06em] uppercase">
-                Per complexity
-              </h3>
-              <table className="w-full border-collapse text-dense">
-                <thead>
-                  <tr className="border-rule border-b">
-                    <Th>Tier</Th>
-                    <Th>Variations</Th>
-                    <Th>Revisions</Th>
-                    <Th>Beyond</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data?.byComplexity ?? []).map((row) => (
-                    <tr key={row.complexity} className="border-rule border-b last:border-0">
-                      <Td>
-                        <ComplexityPill complexity={row.complexity} />
-                      </Td>
-                      {/* Variations, not deliveries: the tier lives on the
-                          variation, and four variations are four pieces of work. */}
-                      <Td className="tabular">{row.variations}</Td>
-                      <Td className="tabular">{row.revisionRounds}</Td>
-                      <Td className={cn('tabular', row.roundsBeyondAllowance > 0 && 'text-beyond')}>
-                        {row.roundsBeyondAllowance}
-                      </Td>
-                    </tr>
-                  ))}
-                  {data?.byComplexity.length === 0 && <Empty colSpan={4} />}
-                </tbody>
-              </table>
-            </div>
+            <Block title="Per complexity" empty={byComplexity.length === 0}>
+              {byComplexity.map((row) => (
+                <Row
+                  key={row.complexity}
+                  label={<ComplexityPill complexity={row.complexity} />}
+                  primary={row.variations}
+                  share={row.variations / topTier}
+                  barClass={TIER_BAR[row.complexity]}
+                  secondary={[
+                    { label: 'revisions', value: row.revisionRounds },
+                    { label: 'beyond', value: row.roundsBeyondAllowance, alarm: true },
+                  ]}
+                />
+              ))}
+            </Block>
           </div>
 
-          <p className="text-ink-faint mt-4 text-micro">
-            Rounds beyond allowance are counted against the allowance in force when each
-            delivery was logged. A count of rounds, not a charge.
+          <p className="border-rule text-ink-faint border-t px-4 py-2.5 text-micro">
+            Beyond allowance counts rounds past the allowance in force when each delivery
+            was logged. A count of rounds, not a charge.
           </p>
         </div>
       )}
@@ -151,53 +156,118 @@ export function LedgerSummary({ filters }: { filters: TaskFilters }) {
   )
 }
 
+/** Low to Standalone, always. The database returns groups in whatever order it likes. */
+const TIER_ORDER: Complexity[] = ['LOW', 'MEDIUM', 'HIGH', 'STANDALONE']
+
+const TIER_BAR: Record<Complexity, string> = {
+  LOW: 'bg-tier-1',
+  MEDIUM: 'bg-tier-2',
+  HIGH: 'bg-tier-3',
+  STANDALONE: 'bg-wash',
+}
+
+function sortTiers<T extends { complexity: Complexity }>(rows: T[]): T[] {
+  return [...rows].sort(
+    (a, b) => TIER_ORDER.indexOf(a.complexity) - TIER_ORDER.indexOf(b.complexity),
+  )
+}
+
 function Stat({
   label,
   value,
-  tone,
-  emphasis,
+  note,
+  alarm,
 }: {
   label: string
   value: number | undefined
-  tone: string
-  emphasis?: boolean
+  note?: string
+  alarm?: boolean
 }) {
   return (
-    <div className={cn('rounded-lg px-4 py-3', tone)}>
+    <div className="px-4 py-4">
+      <div className="text-ink-muted text-micro font-medium tracking-[0.06em] uppercase">
+        {label}
+      </div>
       <div
         className={cn(
-          'display tabular text-[1.5rem] leading-none font-semibold',
-          emphasis && value ? 'text-beyond' : 'text-ink',
+          'display tabular mt-1.5 text-[1.75rem] leading-none font-semibold',
+          alarm ? 'text-beyond' : 'text-ink',
         )}
       >
         {value ?? '—'}
       </div>
-      <div className="text-ink-muted mt-1.5 text-micro">{label}</div>
+      {note && <div className="text-ink-faint mt-1.5 text-micro">{note}</div>}
     </div>
   )
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Block({
+  title,
+  empty,
+  children,
+}: {
+  title: string
+  empty: boolean
+  children: React.ReactNode
+}) {
   return (
-    <th
-      scope="col"
-      className="text-ink-muted px-2 pb-1.5 text-left text-micro font-medium whitespace-nowrap"
-    >
-      {children}
-    </th>
+    <div className="px-4 py-4">
+      <h3 className="text-ink-muted text-micro mb-3 font-medium tracking-[0.06em] uppercase">
+        {title}
+      </h3>
+      {empty ? (
+        <p className="text-ink-faint text-micro">Nothing matches these filters.</p>
+      ) : (
+        <ul className="space-y-3">{children}</ul>
+      )}
+    </div>
   )
 }
 
-function Td({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <td className={cn('px-2 py-2 text-left align-middle', className)}>{children}</td>
-}
-
-function Empty({ colSpan }: { colSpan: number }) {
+/**
+ * One line of the breakdown.
+ *
+ * A row rather than a table cell: the headline number sits beside its label, the
+ * bar gives it scale against the largest row, and the supporting counts sit
+ * underneath in words. Reading "12 revisions · 2 beyond" takes no column
+ * headers to interpret, which is what a four-column table of digits demanded.
+ */
+function Row({
+  label,
+  primary,
+  share,
+  barClass,
+  secondary,
+}: {
+  label: React.ReactNode
+  primary: number
+  share: number
+  barClass: string
+  secondary: { label: string; value: number; alarm?: boolean }[]
+}) {
   return (
-    <tr>
-      <td colSpan={colSpan} className="text-ink-faint py-4 text-center text-micro">
-        Nothing matches these filters.
-      </td>
-    </tr>
+    <li>
+      <div className="flex items-baseline gap-3">
+        <span className="min-w-0 grow truncate">{label}</span>
+        <span className="tabular text-dense font-medium">{primary}</span>
+      </div>
+
+      <div className="bg-wash mt-1.5 h-1.5 overflow-hidden rounded-full">
+        <div
+          className={cn('h-full rounded-full', barClass)}
+          // Rounded to whole percents: a bar is read as a proportion, and
+          // sub-pixel precision buys nothing.
+          style={{ width: `${Math.max(2, Math.round(share * 100))}%` }}
+        />
+      </div>
+
+      <div className="text-ink-muted mt-1.5 flex flex-wrap gap-x-3 text-micro">
+        {secondary.map((s) => (
+          <span key={s.label} className={cn(s.alarm && s.value > 0 && 'text-beyond')}>
+            <span className="tabular">{s.value}</span> {s.label}
+          </span>
+        ))}
+      </div>
+    </li>
   )
 }
