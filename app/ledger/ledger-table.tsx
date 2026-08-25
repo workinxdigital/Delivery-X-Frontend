@@ -19,6 +19,7 @@ import {
 import type { Task, TaskFilters } from '@/lib/api/types'
 import { formatDateOnly, formatTimestamp, summarizeComplexities } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { LedgerSummary } from '@/components/ledger-summary'
 import { FilterBar } from './filter-bar'
 
 /** Only these are sortable, because only these are sortable server-side. */
@@ -115,9 +116,13 @@ export function LedgerTable() {
         exportHref={exportCsvUrl(filters)}
       />
 
+      {/* Totals above the rows, because the question "how much shipped" comes
+          before "which ones". Collapsible, since it is context rather than the
+          work itself. */}
+      <LedgerSummary filters={filters} />
+
       {/*
-        No card. The ledger sits on the paper and its rows are ruled, which is
-        what a register looks like. overflow-x-auto is a safety net for narrow
+        overflow-x-auto is a safety net for narrow
         screens, not the normal case: the column set is chosen to fit.
       */}
       {/*

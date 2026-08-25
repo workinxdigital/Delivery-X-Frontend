@@ -296,3 +296,27 @@ export type AdminUser = {
   active: boolean
   loggedCount: number
 }
+
+/** The ledger's totals, aggregated in the database over the active filters. */
+export type TaskSummary = {
+  totals: {
+    deliveries: number
+    variations: number
+    revisionRounds: number
+    roundsBeyondAllowance: number
+  }
+  byAgency: {
+    agencyId: string
+    agencyName: string
+    deliveries: number
+    variations: number
+    revisionRounds: number
+    roundsBeyondAllowance: number
+  }[]
+  byComplexity: {
+    complexity: Complexity
+    variations: number
+    revisionRounds: number
+    roundsBeyondAllowance: number
+  }[]
+}

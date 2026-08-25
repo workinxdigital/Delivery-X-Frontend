@@ -18,6 +18,7 @@ import type {
   Task,
   TaskDetail,
   TaskFilters,
+  TaskSummary,
   AdminAgency,
   AdminService,
   AdminUser,
@@ -131,6 +132,10 @@ export const getAsins = (brandId: string, q?: string) =>
 
 export const getTasks = (filters: TaskFilters) =>
   apiFetch<TaskListResult>(`/tasks${qs(filters)}`)
+
+/** Totals over the same filters the ledger has applied. */
+export const getTaskSummary = (filters: TaskFilters) =>
+  apiFetch<TaskSummary>(`/tasks/summary${qs(filters)}`)
 
 export const getTask = (id: string) =>
   apiFetch<{ task: TaskDetail }>(`/tasks/${id}`).then((r) => r.task)
