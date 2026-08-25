@@ -210,6 +210,7 @@ export function LogDeliveryForm() {
       brandName: form.brandName.trim(),
       asins: form.asins.map((asin) => ({
         code: asin.code.trim() || null,
+        productName: asin.productName.trim() || null,
         clickupTaskId: asin.clickupTaskId.trim() || null,
         lines: asin.serviceIds.map((serviceId) => ({
           serviceId,

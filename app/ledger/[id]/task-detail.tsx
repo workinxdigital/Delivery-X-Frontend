@@ -121,6 +121,7 @@ export function TaskDetailView({ id }: { id: string }) {
       {editing && <EditTask task={task} onDone={() => setEditing(false)} />}
 
       <dl className="divide-rule grid divide-y">
+        {task.productName && <Detail label="Product">{task.productName}</Detail>}
         <Detail label="ASIN">
           {task.asinCode ? (
             <span className="code">{task.asinCode}</span>

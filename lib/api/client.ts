@@ -121,7 +121,9 @@ export const getDeliverers = () =>
 
 /** ASINs already used for a brand, for the logging form's autocomplete. */
 export const getAsins = (brandId: string, q?: string) =>
-  apiFetch<{ asins: { id: string; code: string; taskCount: number }[] }>(
+  apiFetch<{
+    asins: { id: string; code: string; productName: string | null; taskCount: number }[]
+  }>(
     `/asins${qs({ brandId, q })}`,
   ).then((r) => r.asins)
 

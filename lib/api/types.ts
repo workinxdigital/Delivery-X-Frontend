@@ -47,6 +47,7 @@ export type Task = {
   brandName: string
   asinId: string | null
   asinCode: string | null
+  productName: string | null
   serviceId: string
   serviceName: string
   serviceCategory: string
@@ -148,6 +149,8 @@ export type DeliveryLinePayload = {
 export type AsinPayload = {
   /** Optional: a delivery with no code simply has no ASIN attached. */
   code?: string | null
+  /** What the product is called, for anyone reading the ledger later. */
+  productName?: string | null
   /** The ClickUp task for this listing — one job is one ClickUp task per ASIN. */
   clickupTaskId?: string | null
   lines: DeliveryLinePayload[]

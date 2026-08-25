@@ -14,6 +14,8 @@ export type AsinDraft = {
   key: string
   /** Optional: a PM without the code to hand still needs to log the work. */
   code: string
+  /** What the product is called. How anyone actually recognises the listing. */
+  productName: string
   /** The ClickUp task for this listing, since a job is one task per ASIN. */
   clickupTaskId: string
   serviceIds: string[]
@@ -27,6 +29,7 @@ export function emptyAsin(): AsinDraft {
   return {
     key: `asin-${seq}`,
     code: '',
+    productName: '',
     clickupTaskId: '',
     serviceIds: [],
     variationsByService: {},
@@ -72,7 +75,7 @@ export function AsinSection({
   return (
     <div className="border-rule bg-surface shadow-card rounded-xl border p-4">
       <div className="mb-3 flex items-start gap-4">
-        <div className="grid grow gap-4 sm:grid-cols-2">
+        <div className="grid grow gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field
             label={`ASIN ${index + 1}`}
             htmlFor={`asin-${value.key}`}
@@ -84,7 +87,37 @@ export function AsinSection({
               brandId={brandId}
               value={value.code}
               onChange={(code) => onChange({ ...value, code })}
+              /*
+               * Picking a listing you have used before brings its name with it.
+               * An empty field is only filled in, never overwritten — someone
+               * who has already typed a name meant that name.
+               */
+              onPick={(asin) =>
+                onChange({
+                  ...value,
+                  code: asin.code,
+                  productName: value.productName.trim() || (asin.productName ?? ''),
+                })
+              }
               invalid={Boolean(errors.code)}
+            />
+          </Field>
+
+          {/*
+            The name reads first for a human and the code is the identifier, so
+            they sit together: what it is, and which one it is.
+          */}
+          <Field
+            label="Product name"
+            htmlFor={`product-${value.key}`}
+            optional
+            error={errors.productName}
+          >
+            <Input
+              id={`product-${value.key}`}
+              value={value.productName}
+              placeholder="What the product is called"
+              onChange={(e) => onChange({ ...value, productName: e.target.value })}
             />
           </Field>
 

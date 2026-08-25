@@ -23,6 +23,7 @@ export function AsinInput({
   brandId,
   value,
   onChange,
+  onPick,
   id,
   invalid,
 }: {
@@ -30,6 +31,12 @@ export function AsinInput({
   brandId: string | null
   value: string
   onChange: (value: string) => void
+  /**
+   * Fired when a known listing is chosen from the list, rather than typed.
+   * Lets the caller bring the rest of what it knows — the product name — along
+   * with the code, instead of making someone retype it.
+   */
+  onPick?: (asin: { code: string; productName: string | null }) => void
   id?: string
   invalid?: boolean
 }) {
@@ -61,8 +68,9 @@ export function AsinInput({
     return () => document.removeEventListener('mousedown', onClickAway)
   }, [])
 
-  function commit(code: string) {
-    onChange(code)
+  function commit(asin: { code: string; productName: string | null }) {
+    onChange(asin.code)
+    onPick?.(asin)
     setOpen(false)
     setHighlight(-1)
   }
@@ -95,7 +103,7 @@ export function AsinInput({
             setHighlight((h) => Math.max(h - 1, -1))
           } else if (e.key === 'Enter' && highlight >= 0) {
             e.preventDefault()
-            commit(suggestions[highlight]!.code)
+            commit(suggestions[highlight]!)
           } else if (e.key === 'Escape') {
             setOpen(false)
           }
@@ -120,13 +128,18 @@ export function AsinInput({
                   i === highlight ? 'bg-wash' : 'hover:bg-wash',
                 )}
                 onMouseEnter={() => setHighlight(i)}
-                onClick={() => commit(a.code)}
+                onClick={() => commit(a)}
               >
-                <span className="code">{a.code}</span>
-                {/* How much has already gone out for this listing — enough to
-                    tell two similar codes apart at a glance. */}
+                <span className="min-w-0">
+                  <span className="code">{a.code}</span>
+                  {/* The product's name, which is how anyone actually recognises
+                      a listing — the code tells two similar ones apart. */}
+                  {a.productName && (
+                    <span className="text-ink-muted ml-2 truncate">{a.productName}</span>
+                  )}
+                </span>
                 {a.taskCount > 0 && (
-                  <span className="text-ink-faint text-micro">
+                  <span className="text-ink-faint text-micro shrink-0">
                     {a.taskCount} delivered
                   </span>
                 )}

@@ -35,6 +35,7 @@ const COLUMNS: {
   { key: 'code', label: 'Code', sort: 'taskCode' },
   { key: 'delivered', label: 'Delivered', sort: 'deliveredOn' },
   { key: 'brand', label: 'Brand' },
+  { key: 'product', label: 'Product' },
   { key: 'asin', label: 'ASIN' },
   { key: 'agency', label: 'Agency' },
   { key: 'service', label: 'Service' },
@@ -265,6 +266,11 @@ function Row({
       {/* Brand is the primary identity, so it carries the weight. */}
       <Td className="max-w-[16ch] truncate font-medium" title={task.brandName}>
         {task.brandName}
+      </Td>
+
+      {/* What the product is called — the part a person recognises. */}
+      <Td className="max-w-[18ch] truncate" title={task.productName ?? undefined}>
+        {task.productName ?? <span className="text-ink-faint">—</span>}
       </Td>
 
       {/*
