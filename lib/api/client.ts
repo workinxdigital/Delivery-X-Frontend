@@ -262,6 +262,26 @@ export const deleteAgency = (id: string, force = false) =>
     body: JSON.stringify({ force }),
   })
 
+// ---------------------------------------------------------------- team
+
+export const getAdminDeliverers = () =>
+  apiFetch<{ deliverers: { id: string; name: string; taskCount: number }[] }>(
+    '/admin/deliverers',
+  ).then((r) => r.deliverers)
+
+export const createDeliverer = (name: string) =>
+  apiFetch<{ deliverer: { id: string; name: string; created: boolean } }>(
+    '/admin/deliverers',
+    { method: 'POST', body: JSON.stringify({ name }) },
+  )
+
+/** Soft delete: the name stops being offered, and its deliveries keep it. */
+export const deleteDeliverer = (id: string) =>
+  apiFetch<{ removed: { id: string; name: string; keptDeliveries: number } }>(
+    `/admin/deliverers/${id}`,
+    { method: 'DELETE' },
+  )
+
 // ---------------------------------------------------------------- brands
 
 export const getAdminBrands = (agencyId?: string) =>

@@ -6,19 +6,21 @@ import { cn } from '@/lib/utils'
 import { AgenciesPanel } from './agencies-panel'
 import { BrandsPanel } from './brands-panel'
 import { ServicesPanel } from './services-panel'
+import { TeamPanel } from './team-panel'
 
 /**
- * People is deliberately absent.
+ * Team is the people who deliver work, not the accounts that can sign in.
  *
- * Accounts are managed outside this screen: everyone changes their own password
- * on /account, and a new account or a reset is done with `npm run set-password`
- * in the API project. The four accounts are fixed and rarely change, so a whole
- * admin panel for them was more surface than the job needed.
+ * Login accounts are still managed outside this screen — everyone changes their
+ * own password on /account, and creating one or resetting it is
+ * `npm run set-password` in the API project. Those are fixed and rarely change.
+ * The team list is neither: it grows as colleagues get named on deliveries.
  */
 const TABS = [
   { key: 'agencies', label: 'Agencies' },
   { key: 'brands', label: 'Brands' },
   { key: 'services', label: 'Services' },
+  { key: 'team', label: 'Team' },
 ] as const
 
 /**
@@ -78,6 +80,7 @@ export function AdminScreen() {
       {tab === 'agencies' && <AgenciesPanel />}
       {tab === 'brands' && <BrandsPanel />}
       {tab === 'services' && <ServicesPanel />}
+      {tab === 'team' && <TeamPanel />}
     </div>
   )
 }
