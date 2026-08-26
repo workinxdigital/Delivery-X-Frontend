@@ -20,6 +20,7 @@ import type {
   TaskFilters,
   TaskSummary,
   AdminAgency,
+  AdminBrand,
   AdminService,
   AdminUser,
   SessionUser,
@@ -260,6 +261,30 @@ export const deleteAgency = (id: string, force = false) =>
     method: 'DELETE',
     body: JSON.stringify({ force }),
   })
+
+// ---------------------------------------------------------------- brands
+
+export const getAdminBrands = (agencyId?: string) =>
+  apiFetch<{ brands: AdminBrand[] }>(`/admin/brands${qs({ agencyId })}`).then((r) => r.brands)
+
+export const createBrand = (payload: { agencyId: string; name: string }) =>
+  apiFetch<{ brand: { id: string; name: string } }>('/admin/brands', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+export const renameBrand = (id: string, name: string) =>
+  apiFetch<{ brand: { id: string; name: string } }>(`/admin/brands/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name }),
+  })
+
+/** `force` takes the brand's deliveries with it. Soft-deleted either way. */
+export const deleteBrand = (id: string, force = false) =>
+  apiFetch<{ removed: { id: string; name: string; tasksRemoved: number } }>(
+    `/admin/brands/${id}`,
+    { method: 'DELETE', body: JSON.stringify({ force }) },
+  )
 
 export const getAdminServices = () =>
   apiFetch<{ services: AdminService[] }>('/admin/services').then((r) => r.services)

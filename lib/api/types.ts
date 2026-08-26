@@ -320,3 +320,13 @@ export type TaskSummary = {
     roundsBeyondAllowance: number
   }[]
 }
+
+/** A brand as the admin screen sees it, with what depends on it. */
+export type AdminBrand = {
+  id: string
+  name: string
+  agencyId: string
+  agencyName: string
+  taskCount: number
+  asinCount: number
+}

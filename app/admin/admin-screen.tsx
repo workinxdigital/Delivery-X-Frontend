@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { isAdmin, useSession } from '@/components/session'
 import { cn } from '@/lib/utils'
 import { AgenciesPanel } from './agencies-panel'
+import { BrandsPanel } from './brands-panel'
 import { ServicesPanel } from './services-panel'
 
 /**
@@ -16,6 +17,7 @@ import { ServicesPanel } from './services-panel'
  */
 const TABS = [
   { key: 'agencies', label: 'Agencies' },
+  { key: 'brands', label: 'Brands' },
   { key: 'services', label: 'Services' },
 ] as const
 
@@ -74,6 +76,7 @@ export function AdminScreen() {
       </div>
 
       {tab === 'agencies' && <AgenciesPanel />}
+      {tab === 'brands' && <BrandsPanel />}
       {tab === 'services' && <ServicesPanel />}
     </div>
   )
