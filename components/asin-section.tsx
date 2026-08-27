@@ -109,12 +109,20 @@ export function AsinSection({
     })
 
   return (
-    <div className="border-rule bg-surface shadow-card overflow-hidden rounded-xl border">
+    /*
+      No overflow-hidden on the card.
+      
+      It was there to clip the tinted header into the rounded corners, and it
+      also clipped every popover inside — the services dropdown opened and was
+      cut off to a sliver showing only its search box. The header rounds its own
+      top corners instead, which needs no clipping context.
+    */
+    <div className="border-rule bg-surface shadow-card rounded-xl border">
       {/*
         Header: which product this is. Tinted and ruled off, so the card reads as
         "this listing", then "what shipped for it".
       */}
-      <div className="border-rule bg-wash/50 border-b px-4 py-3.5">
+      <div className="border-rule bg-wash/50 rounded-t-xl border-b px-4 py-3.5">
         <div className="flex items-start gap-4">
           <div className="grid grow gap-3 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
             <Field
