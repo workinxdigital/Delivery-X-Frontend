@@ -108,3 +108,37 @@ export function formatCategory(raw: string): string {
     .map((word, i) => (i === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word))
     .join(' ')
 }
+
+/**
+ * The currency symbol, in one place.
+ *
+ * A single implicit currency, since the rate card is one card. If a second one
+ * is ever needed it becomes a column on the rate rather than a constant here,
+ * and that is a product decision rather than a formatting one.
+ */
+export const CURRENCY = '₹'
+
+/**
+ * Amounts arrive from the API as integers in the minor unit — money in floats
+ * drifts across hundreds of rows — so display divides by 100 rather than
+ * trusting a decimal that travelled as text.
+ */
+export function formatMoneyMinor(minor: number, withSymbol = true): string {
+  const abs = Math.abs(Math.trunc(minor))
+  const major = Math.floor(abs / 100)
+  const cents = abs % 100
+  const body = `${major.toLocaleString('en-IN')}.${String(cents).padStart(2, '0')}`
+  return `${minor < 0 ? '-' : ''}${withSymbol ? CURRENCY : ''}${body}`
+}
+
+/** The first and last day of a month, as the API's date-only strings. */
+export function monthRange(yearMonth: string): { from: string; to: string } {
+  const [y, m] = yearMonth.split('-').map(Number)
+  const last = new Date(Date.UTC(y!, m!, 0)).getUTCDate()
+  return { from: `${yearMonth}-01`, to: `${yearMonth}-${String(last).padStart(2, '0')}` }
+}
+
+/** This month, in the IST day the user is actually having. */
+export function currentYearMonth(): string {
+  return todayInIST().slice(0, 7)
+}

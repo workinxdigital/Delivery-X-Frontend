@@ -16,11 +16,17 @@ It is a **delivery ledger**, not a project management tool. ClickUp remains the 
 
 ### Scope boundary — read this twice
 
-**There is no pricing anywhere in this system.** No rates, no rate cards, no currency, no amounts, no invoices, no money columns in the database, no price fields in any admin screen. This is a deliberate product decision, not an oversight or a phase-1 simplification.
+DeliverX records **facts about delivered work**: who, what, how many, how complex, how many revision rounds. That is what a delivery means, and it never involves money.
 
-DeliverX records **facts about delivered work**: who, what, how many, how complex, how many revision rounds. Commercial terms live outside this system. The owners take the exported counts and apply pricing in their existing tooling.
+**Pricing exists in exactly one place, and it is not the ledger.** The original rule here was "no pricing anywhere in this system". The owner reversed it on **2026-08-25**, asking for an admin-only pricing calculator so the monthly value of what shipped can be read here instead of rebuilt in a spreadsheet. The boundaries of that reversal are the important part:
 
-If a feature request would introduce a monetary value into the schema or UI, stop and raise it before building.
+- The **only** table holding money is `service_rates` — a rate card an admin fills in by hand.
+- **No task, agency, brand, ASIN or revision round carries an amount.** Nothing in the ledger changed.
+- Because of that, a rate typed today re-prices last month rather than rewriting it. The ledger says what shipped; the calculator says what that was worth, and the two are never entangled.
+- The calculator is behind `requireAdmin`, like the rest of the admin router.
+- Amounts are stored as integers in the currency's minor unit. Money in floating point drifts across hundreds of rows.
+
+Anything beyond that — invoices, tax, payment status, per-agency rate overrides, a second currency — is still out of scope. If a feature request would put an amount on a delivery record, stop and raise it before building.
 
 ### Primary users
 | Role | What they do |
@@ -215,11 +221,26 @@ Default view: current month, all agencies.
 "Real-time" here means **polling on a 30-second interval** plus refetch on window focus. Do not build websockets or SSE. It is not warranted at this data volume.
 
 ### 5.5 Admin / Backend
-CRUD for agencies (including their revision allowance), services and bundle composition, and users. Brand management: list, rename, merge.
+Five tabs, all behind `requireAdmin`:
+
+- **Agencies** — create, edit the revision allowance, activate/deactivate, delete. Deleting one with deliveries takes them with it, after confirmation; a deleted name re-added is restored rather than duplicated.
+- **Brands** — list, rename, remove. Deliberately no "add": brands appear when a PM types one while logging, and a DIRECT client's brand is the agency itself.
+- **Services** — the catalogue, and switching a service off.
+- **Team** — the people who can be named as having delivered work. Not login accounts; nobody here needs an email or a password. Typing a new name on the logging form adds one too.
+- **Pricing** — the rate card and the month's total by service (§5.7).
+
+Login accounts are managed outside the app with `npm run set-password`; everyone changes their own password on `/account`.
 
 ### 5.6 Period Close & Export
 Per period: summary of everything delivered, grouped by agency and service. Lock action. CSV export. This is the handoff point where the owners take the numbers into their own commercial tooling.
 
+
+### 5.7 Pricing calculator (admin only)
+Added 2026-08-25, reversing the original no-pricing rule — see §1 for what that does and does not permit.
+
+**Rate card.** One row per service, three amounts: the service delivered once, each variation beyond the first, and each revision round past the agency's free allowance. Saved per service, audited like every other admin change. Zero means free; a blank is refused rather than stored as zero, because a rate that silently became 0 would understate every total built on it.
+
+**The month.** Deliveries in a date range, priced and grouped by service, with the counts beside the money so a number can be explained. Services delivered with no rate set are **named, not priced at zero** — a total that looks complete while omitting half the month's work is the worst thing this screen could do.
 ---
 
 ## 6. Tech stack

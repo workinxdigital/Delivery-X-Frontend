@@ -332,3 +332,46 @@ export type AdminBrand = {
   taskCount: number
   asinCount: number
 }
+
+/** A service and what an admin says it is worth. Amounts are minor units. */
+export type ServiceRateRow = {
+  serviceId: string
+  serviceName: string
+  category: string
+  active: boolean
+  hasRate: boolean
+  baseMinor: number
+  perVariationMinor: number
+  perExtraRevisionMinor: number
+  notes: string | null
+  updatedAt: string | null
+}
+
+/** What shipped in a date range, priced by service. */
+export type PricingSummary = {
+  from: string
+  to: string
+  lines: {
+    serviceId: string
+    serviceName: string
+    category: string
+    hasRate: boolean
+    deliveries: number
+    variations: number
+    extraRounds: number
+    baseMinor: number
+    variationsMinor: number
+    revisionsMinor: number
+    totalMinor: number
+  }[]
+  totals: {
+    deliveries: number
+    variations: number
+    extraRounds: number
+    baseMinor: number
+    variationsMinor: number
+    revisionsMinor: number
+    totalMinor: number
+  }
+  unpriced: { serviceId: string; serviceName: string; deliveries: number }[]
+}

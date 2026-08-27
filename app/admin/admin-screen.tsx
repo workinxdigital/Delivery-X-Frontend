@@ -5,6 +5,7 @@ import { isAdmin, useSession } from '@/components/session'
 import { cn } from '@/lib/utils'
 import { AgenciesPanel } from './agencies-panel'
 import { BrandsPanel } from './brands-panel'
+import { PricingPanel } from './pricing-panel'
 import { ServicesPanel } from './services-panel'
 import { TeamPanel } from './team-panel'
 
@@ -21,6 +22,7 @@ const TABS = [
   { key: 'brands', label: 'Brands' },
   { key: 'services', label: 'Services' },
   { key: 'team', label: 'Team' },
+  { key: 'pricing', label: 'Pricing' },
 ] as const
 
 /**
@@ -81,6 +83,7 @@ export function AdminScreen() {
       {tab === 'brands' && <BrandsPanel />}
       {tab === 'services' && <ServicesPanel />}
       {tab === 'team' && <TeamPanel />}
+      {tab === 'pricing' && <PricingPanel />}
     </div>
   )
 }

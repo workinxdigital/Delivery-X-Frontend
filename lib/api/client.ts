@@ -22,6 +22,8 @@ import type {
   AdminAgency,
   AdminBrand,
   AdminService,
+  PricingSummary,
+  ServiceRateRow,
   AdminUser,
   SessionUser,
   TaskListResult,
@@ -261,6 +263,25 @@ export const deleteAgency = (id: string, force = false) =>
     method: 'DELETE',
     body: JSON.stringify({ force }),
   })
+
+// ---------------------------------------------------------------- pricing
+
+export const getServiceRates = () =>
+  apiFetch<{ services: ServiceRateRow[] }>('/admin/service-rates').then((r) => r.services)
+
+export const saveServiceRate = (payload: {
+  serviceId: string
+  base: string
+  perVariation: string
+  perExtraRevision: string
+}) =>
+  apiFetch<{ rate: { id: string } }>('/admin/service-rates', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+
+export const getPricing = (from: string, to: string) =>
+  apiFetch<PricingSummary>(`/admin/pricing${qs({ from, to })}`)
 
 // ---------------------------------------------------------------- team
 
