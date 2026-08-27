@@ -200,11 +200,11 @@ export function AsinSection({
           <div
             key={serviceId}
             className={cn(
-              'grid gap-x-5 gap-y-2 pt-3.5 sm:grid-cols-[10rem_minmax(0,1fr)]',
+              'grid gap-x-5 gap-y-2 pt-3.5 md:grid-cols-[9rem_minmax(0,1fr)]',
               i > 0 ? 'border-rule mt-3.5 border-t' : 'mt-1',
             )}
           >
-            <div className="sm:pt-0.5">
+            <div className="md:pt-0.5">
               <div className="text-dense font-medium">{service.name}</div>
               <div className="text-ink-faint text-micro">
                 {formatCategory(service.category)}
@@ -238,27 +238,25 @@ export function AsinSection({
               {/*
                 Indented to 2rem: the variation grid reserves a 1.25rem number
                 track plus a 0.75rem gap before its content, so the segmented
-                control, the add link and this all start at the same x. Without
-                it this row sat 24px to their left, which is most of what read as
-                "everything is here and there".
+                control, the add link and this all start at the same x.
               */}
-              <div className="mt-1.5 flex items-baseline gap-2 pl-8">
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 pl-8">
                 <label
                   htmlFor={`${uid}-clickup-${serviceId}`}
-                  className="text-ink-faint shrink-0 text-micro"
+                  className="text-ink-muted shrink-0 text-micro"
                 >
                   ClickUp
                 </label>
                 {/*
-                  Borderless until hovered or focused. It is optional, usually
-                  empty, and a full bordered field for it competed with the
-                  controls that actually carry the record.
+                  A real bordered field, quiet by size rather than by absence.
+                  Borderless read as "not there at all" — an optional field
+                  still has to look like somewhere you can type.
                 */}
                 <input
                   id={`${uid}-clickup-${serviceId}`}
                   value={value.clickupByService[serviceId] ?? ''}
                   placeholder="task ID or URL"
-                  className="text-ink placeholder:text-ink-faint hover:border-control focus:border-control w-full max-w-[20rem] border-b border-transparent bg-transparent pb-0.5 text-micro transition-colors duration-[120ms] outline-none"
+                  className="border-control bg-surface text-ink placeholder:text-ink-muted focus:border-ink h-8 w-full max-w-[18rem] rounded-md border px-2.5 text-micro transition-colors duration-[120ms] outline-none"
                   onChange={(e) =>
                     onChange({
                       ...value,

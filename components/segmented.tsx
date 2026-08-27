@@ -33,7 +33,15 @@ export function Segmented<T extends string>({
         `grid-cols-${options.length}`,
         invalid && 'border-danger',
       )}
-      style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+      /*
+       * minmax(max-content, 1fr), not minmax(0, 1fr).
+       *
+       * Equal columns that may shrink to zero clipped the longest label —
+       * "Standalone" lost its last characters whenever the row got tight. Now
+       * the segments share space when there is space and refuse to go below
+       * their text when there is not.
+       */
+      style={{ gridTemplateColumns: `repeat(${options.length}, minmax(max-content, 1fr))` }}
     >
       {options.map((option, i) => {
         const selected = option.value === value
@@ -53,11 +61,17 @@ export function Segmented<T extends string>({
               if (next) onChange(next.value)
             }}
             className={cn(
-              'px-2 py-1.5 text-micro transition-colors duration-[120ms] sm:text-dense',
+              'px-2 py-1.5 text-micro whitespace-nowrap transition-colors duration-[120ms] sm:text-dense',
               // Hairline dividers between segments, not gaps: it is one control.
               i > 0 && 'border-control border-l',
+              /*
+               * No weight change on selection. Bold text is wider, so the
+               * segments — and with them the whole row — resized whenever the
+               * choice changed, and "Standalone" being the longest label made
+               * that jump visible. The ink fill is emphasis enough.
+               */
               selected
-                ? 'bg-ink text-primary-foreground font-medium'
+                ? 'bg-ink text-primary-foreground'
                 : 'text-ink-muted hover:bg-wash hover:text-ink',
             )}
           >

@@ -29,7 +29,13 @@ export const emptyVariation = (): VariationDraft => ({ complexity: '', revisionC
  * The number track is always present, even with a single variation, so adding a
  * second one does not shift the whole row sideways.
  */
-const GRID = 'grid grid-cols-[1.25rem_1fr] gap-x-3 sm:grid-cols-[1.25rem_minmax(0,21rem)_6rem_1.5rem]'
+/*
+ * Four columns only from md up, and the complexity column never narrower than
+ * its content. At sm the four columns fitted on paper and squeezed the
+ * segmented control in practice, which is what clipped "Standalone".
+ */
+const GRID =
+  'grid grid-cols-[1.25rem_1fr] gap-x-3 gap-y-1 md:grid-cols-[1.25rem_minmax(max-content,20rem)_5.5rem_1.5rem]' 
 
 /**
  * The variations of one delivered service, each with its own complexity and its
@@ -83,7 +89,7 @@ export function VariationRows({
     <div className="space-y-1.5">
       {/* Labels once for the section, aligned to the row grid. */}
       {showLabels && (
-        <div className={cn(GRID, 'hidden sm:grid')}>
+        <div className={cn(GRID, 'hidden md:grid')}>
           <span />
           <span className="text-ink-muted text-micro">Complexity</span>
           <span className="text-ink-muted text-micro">Revisions</span>
@@ -99,7 +105,7 @@ export function VariationRows({
           </span>
 
           <div className="space-y-1">
-            <span className="text-ink-muted text-micro sm:hidden">Complexity</span>
+            <span className="text-ink-muted text-micro md:hidden">Complexity</span>
             <Segmented
               name={`Complexity for variation ${i + 1}`}
               options={COMPLEXITIES}
@@ -114,12 +120,19 @@ export function VariationRows({
             )}
           </div>
 
-          <div className="space-y-1">
-            <span className="text-ink-muted text-micro sm:hidden">Revisions</span>
+          {/*
+            col-start-2 below md: the stacked grid has only two columns, so
+            without this the revisions cell wrapped into the 1.25rem number
+            track and the input shrank to a 20px sliver. It looked broken
+            because it was.
+          */}
+          <div className="space-y-1 max-md:col-start-2">
+            <span className="text-ink-muted text-micro md:hidden">Revisions</span>
             <Input
               type="number"
               min={0}
               step={1}
+              className="w-20 md:w-full"
               aria-label={`Revisions for variation ${i + 1}`}
               value={variation.revisionCount}
               aria-invalid={Boolean(errors[`variations.${i}.revisionCount`])}
@@ -139,6 +152,7 @@ export function VariationRows({
             aria-label={`Remove variation ${i + 1}`}
             className={cn(
               'text-ink-faint hover:text-ink mt-1 flex size-7 items-center justify-center rounded-md transition-colors duration-[120ms]',
+              'max-md:col-start-2 max-md:justify-self-end',
               !numbered && 'invisible',
             )}
           >
@@ -149,7 +163,7 @@ export function VariationRows({
 
       <div className={cn(GRID, 'items-baseline')}>
         <span />
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 sm:col-span-3">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 md:col-span-3">
           {/* A quiet text control, not another bordered block. */}
           <button
             type="button"
