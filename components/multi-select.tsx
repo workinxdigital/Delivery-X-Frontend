@@ -101,8 +101,18 @@ export function MultiSelect({
   const summary =
     values.length === 0
       ? placeholder
-      : values.length === 1
-        ? (options.find((o) => o.value === values[0])?.label ?? '1 selected')
+      : /*
+         * Name what is selected rather than counting it.
+         *
+         * "2 services" made you open the control to find out which two, on a
+         * field whose whole purpose is to say what shipped. Names fit for the
+         * common case; past three the count is genuinely more readable than a
+         * run-on list.
+         */
+        values.length <= 3
+        ? values
+            .map((v) => options.find((o) => o.value === v)?.label ?? v)
+            .join(', ')
         : `${values.length} services`
 
   let index = -1
