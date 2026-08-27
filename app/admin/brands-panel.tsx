@@ -4,31 +4,29 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Combobox } from '@/components/combobox'
-import { Field } from '@/components/field'
 import { Input } from '@/components/ui/input'
 import {
   ApiError,
-  createBrand,
   deleteBrand,
   getAdminAgencies,
   getAdminBrands,
   renameBrand,
 } from '@/lib/api/client'
-import { GhostButton, PanelHeader, PrimaryButton, Td, Th } from './panel-parts'
+import { GhostButton, PanelHeader, Td, Th } from './panel-parts'
 
 /**
  * Brand management (§2.2, §5.5).
  *
- * Brands are not master data — a PM types one on the logging form and it is
- * created on save. So this screen is not how they normally appear; it is how
- * they get corrected. Renaming a misspelling is the common case, since the wrong
- * spelling is otherwise permanent and quietly splits one client's history in
- * two.
+ * Read, rename, remove — deliberately no "add". Brands are not master data:
+ * a PM types one while logging and it is created on save, and a direct client's
+ * brand is the agency itself. Adding one here would be a fourth way to create
+ * the same thing, and the one nobody would use.
+ *
+ * Renaming is the reason this screen exists. A misspelling is otherwise
+ * permanent and quietly splits one client's history in two.
  */
 export function BrandsPanel() {
   const queryClient = useQueryClient()
-  const [adding, setAdding] = useState(false)
-  const [draft, setDraft] = useState({ agencyId: '', name: '' })
   const [editing, setEditing] = useState<string | null>(null)
   const [nameDraft, setNameDraft] = useState('')
   const [confirming, setConfirming] = useState<string | null>(null)
@@ -52,17 +50,6 @@ export function BrandsPanel() {
 
   const onError = (e: unknown) =>
     toast.error(e instanceof ApiError ? e.message : 'That did not work')
-
-  const create = useMutation({
-    mutationFn: () => createBrand({ agencyId: draft.agencyId, name: draft.name.trim() }),
-    onSuccess: (r) => {
-      toast(`${r.brand.name} added`)
-      setDraft({ agencyId: draft.agencyId, name: '' })
-      setAdding(false)
-      refresh()
-    },
-    onError,
-  })
 
   const rename = useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => renameBrand(id, name),
@@ -94,61 +81,8 @@ export function BrandsPanel() {
     <div>
       <PanelHeader
         title="Brands"
-        note="Brands appear on their own when a PM types one while logging. This is where a misspelling gets renamed — otherwise one client's history quietly splits in two."
-        action={
-          !adding && (
-            <PrimaryButton type="button" onClick={() => setAdding(true)}>
-              Add brand
-            </PrimaryButton>
-          )
-        }
+        note="Brands appear on their own when a PM types one while logging, or from the agency itself for a direct client. This is where a misspelling gets renamed — otherwise one client's history quietly splits in two."
       />
-
-      {adding && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            create.mutate()
-          }}
-          className="border-rule bg-wash/40 mb-6 grid gap-4 rounded-xl border p-4 sm:grid-cols-2"
-        >
-          <Field label="Agency">
-            <Combobox
-              options={agencyOptions}
-              value={draft.agencyId}
-              clearable={false}
-              placeholder="Which agency"
-              searchPlaceholder="Search agencies"
-              onChange={(v) => setDraft({ ...draft, agencyId: v })}
-            />
-          </Field>
-
-          <Field label="Brand name">
-            <Input
-              autoFocus
-              value={draft.name}
-              placeholder="The company the work is for"
-              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-            />
-          </Field>
-
-          <div className="flex items-center gap-3 sm:col-span-2">
-            <PrimaryButton
-              disabled={create.isPending || !draft.name.trim() || !draft.agencyId}
-            >
-              {create.isPending ? 'Adding' : 'Add brand'}
-            </PrimaryButton>
-            <GhostButton
-              onClick={() => {
-                setAdding(false)
-                setDraft({ agencyId: '', name: '' })
-              }}
-            >
-              Cancel
-            </GhostButton>
-          </div>
-        </form>
-      )}
 
       {/* Brands are scoped to an agency, so filtering by one is how you find
           anything once there are more than a screenful. */}

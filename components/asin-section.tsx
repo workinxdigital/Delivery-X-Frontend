@@ -16,8 +16,13 @@ export type AsinDraft = {
   code: string
   /** What the product is called. How anyone actually recognises the listing. */
   productName: string
-  /** The ClickUp task for this listing, since a job is one task per ASIN. */
-  clickupTaskId: string
+  /**
+   * The ClickUp task per service, keyed by serviceId.
+   *
+   * A listing that gets A+ content and a video is two pieces of work tracked as
+   * two tasks, so one id on the ASIN pointed both rows at whichever was typed.
+   */
+  clickupByService: Record<string, string>
   serviceIds: string[]
   /** Keyed by serviceId so deselecting and reselecting keeps the work. */
   variationsByService: Record<string, VariationDraft[]>
@@ -30,7 +35,7 @@ export function emptyAsin(): AsinDraft {
     key: `asin-${seq}`,
     code: '',
     productName: '',
-    clickupTaskId: '',
+    clickupByService: {},
     serviceIds: [],
     variationsByService: {},
   }
@@ -75,7 +80,7 @@ export function AsinSection({
   return (
     <div className="border-rule bg-surface shadow-card rounded-xl border p-4">
       <div className="mb-3 flex items-start gap-4">
-        <div className="grid grow gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grow gap-4 sm:grid-cols-2">
           <Field
             label={`ASIN ${index + 1}`}
             htmlFor={`asin-${value.key}`}
@@ -121,16 +126,6 @@ export function AsinSection({
             />
           </Field>
 
-          {/* Paired with the code, because they identify the same thing from
-              two directions: the listing, and the task that delivered it. */}
-          <Field label="ClickUp task" htmlFor={`clickup-${value.key}`} optional>
-            <Input
-              id={`clickup-${value.key}`}
-              value={value.clickupTaskId}
-              placeholder="ID or URL"
-              onChange={(e) => onChange({ ...value, clickupTaskId: e.target.value })}
-            />
-          </Field>
         </div>
 
         {removable && (
@@ -180,6 +175,30 @@ export function AsinSection({
               <span className="text-ink-faint text-micro">
                 {formatCategory(service.category)}
               </span>
+            </div>
+
+            {/* One task per service, sitting with the work it tracks. */}
+            <div className="mb-3 max-w-[22rem]">
+              <Field
+                label="ClickUp task"
+                htmlFor={`clickup-${value.key}-${serviceId}`}
+                optional
+              >
+                <Input
+                  id={`clickup-${value.key}-${serviceId}`}
+                  value={value.clickupByService[serviceId] ?? ''}
+                  placeholder="ID or URL"
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      clickupByService: {
+                        ...value.clickupByService,
+                        [serviceId]: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </Field>
             </div>
 
             <VariationRows

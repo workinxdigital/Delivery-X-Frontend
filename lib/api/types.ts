@@ -141,6 +141,8 @@ export type VariationPayload = {
 /** One delivered service within a submission, with its own variations. */
 export type DeliveryLinePayload = {
   serviceId: string
+  /** The ClickUp task for this service. */
+  clickupTaskId?: string | null
   /** At least one. variationCount is derived from this, never typed separately. */
   variations: VariationPayload[]
 }

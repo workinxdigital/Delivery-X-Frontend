@@ -287,12 +287,6 @@ export const deleteDeliverer = (id: string) =>
 export const getAdminBrands = (agencyId?: string) =>
   apiFetch<{ brands: AdminBrand[] }>(`/admin/brands${qs({ agencyId })}`).then((r) => r.brands)
 
-export const createBrand = (payload: { agencyId: string; name: string }) =>
-  apiFetch<{ brand: { id: string; name: string } }>('/admin/brands', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
-
 export const renameBrand = (id: string, name: string) =>
   apiFetch<{ brand: { id: string; name: string } }>(`/admin/brands/${id}`, {
     method: 'PATCH',

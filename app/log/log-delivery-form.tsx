@@ -82,6 +82,18 @@ export function LogDeliveryForm() {
 
   const selectedAgency = agencies.find((a) => a.id === form.agencyId)
 
+  /**
+   * A DIRECT client is its own brand.
+   *
+   * That is the whole distinction between the two kinds: an AGENCY brings us
+   * work for other people's brands, a DIRECT client IS the brand. So the field
+   * is filled from the agency and locked rather than asking someone to retype
+   * the name they just chose — and the server takes the name from the agency
+   * regardless of what this form sends (§4.6).
+   */
+  const isDirect = selectedAgency?.type === 'DIRECT'
+  const brandName = isDirect ? (selectedAgency?.name ?? '') : form.brandName
+
   /** One ledger row per service per ASIN, which is what the note below reports. */
   const rowCount = form.asins.reduce((n, a) => n + a.serviceIds.length, 0)
 
@@ -93,11 +105,11 @@ export function LogDeliveryForm() {
    * yet, which is why this is allowed to be null rather than blocking anything.
    */
   const { data: brandMatches = [] } = useQuery({
-    queryKey: ['brands', form.agencyId, form.brandName.trim()],
-    queryFn: () => getBrands(form.agencyId, form.brandName.trim()),
-    enabled: Boolean(form.agencyId && form.brandName.trim()),
+    queryKey: ['brands', form.agencyId, brandName.trim()],
+    queryFn: () => getBrands(form.agencyId, brandName.trim()),
+    enabled: Boolean(form.agencyId && brandName.trim()),
   })
-  const typedBrand = form.brandName.trim().toLowerCase()
+  const typedBrand = brandName.trim().toLowerCase()
   const brandId =
     brandMatches.find((b) => b.name.trim().toLowerCase() === typedBrand)?.id ?? null
 
@@ -106,10 +118,10 @@ export function LogDeliveryForm() {
   // accidental double-save this guards against (§5.1).
   const firstService = form.asins[0]?.serviceIds[0]
   const duplicateKey =
-    form.agencyId && form.brandName.trim() && firstService
+    form.agencyId && brandName.trim() && firstService
       ? {
           agencyId: form.agencyId,
-          brandName: form.brandName.trim(),
+          brandName: brandName.trim(),
           serviceId: firstService,
           deliveredOn: form.deliveredOn,
         }
@@ -175,7 +187,8 @@ export function LogDeliveryForm() {
   function validate(): boolean {
     const next: Record<string, string> = {}
     if (!form.agencyId) next.agencyId = 'Pick an agency'
-    if (!form.brandName.trim()) next.brandName = 'Enter a brand'
+    // A direct client's name comes from the agency, so there is nothing to check.
+    if (!isDirect && !form.brandName.trim()) next.brandName = 'Enter a brand'
     // Errors are namespaced by ASIN index, so one section cannot light up
     // another section's fields.
     form.asins.forEach((asin, ai) => {
@@ -207,13 +220,13 @@ export function LogDeliveryForm() {
     }
     mutation.mutate({
       agencyId: form.agencyId,
-      brandName: form.brandName.trim(),
+      brandName: brandName.trim(),
       asins: form.asins.map((asin) => ({
         code: asin.code.trim() || null,
         productName: asin.productName.trim() || null,
-        clickupTaskId: asin.clickupTaskId.trim() || null,
         lines: asin.serviceIds.map((serviceId) => ({
           serviceId,
+          clickupTaskId: asin.clickupByService[serviceId]?.trim() || null,
           variations: (asin.variationsByService[serviceId] ?? []).map((v) => ({
             complexity: v.complexity as Complexity,
             revisionCount: Number(v.revisionCount),
@@ -266,18 +279,32 @@ export function LogDeliveryForm() {
           htmlFor="brand"
           error={errors.brandName}
           hint={
-            selectedAgency
-              ? `${selectedAgency.freeRevisionAllowance} free revision${selectedAgency.freeRevisionAllowance === 1 ? '' : 's'} on this contract.`
-              : undefined
+            isDirect
+              ? 'A direct client is its own brand, so this comes from the agency.'
+              : selectedAgency
+                ? `${selectedAgency.freeRevisionAllowance} free revision${selectedAgency.freeRevisionAllowance === 1 ? '' : 's'} on this contract.`
+                : undefined
           }
         >
-          <BrandInput
-            id="brand"
-            agencyId={form.agencyId}
-            value={form.brandName}
-            onChange={(v) => set('brandName', v)}
-            invalid={Boolean(errors.brandName)}
-          />
+          {isDirect ? (
+            /*
+             * Read-only rather than a disabled input: a disabled field looks
+             * broken and is skipped by the keyboard, when the honest message is
+             * "this is already decided". The value is still visible, which
+             * matters — it is what gets recorded.
+             */
+            <div className="border-control bg-wash text-ink-muted flex h-10 items-center rounded-lg border px-3 text-dense">
+              {brandName}
+            </div>
+          ) : (
+            <BrandInput
+              id="brand"
+              agencyId={form.agencyId}
+              value={form.brandName}
+              onChange={(v) => set('brandName', v)}
+              invalid={Boolean(errors.brandName)}
+            />
+          )}
         </Field>
       </Band>
 
