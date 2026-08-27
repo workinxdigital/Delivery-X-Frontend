@@ -169,36 +169,43 @@ export function AsinSection({
         if (!service) return null
 
         return (
-          <div key={serviceId} className={cn('mt-4', i > 0 && 'pt-4')}>
-            <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2">
+          <div
+            key={serviceId}
+            // A hairline between services rather than padding: the blocks are
+            // short, and space alone did not group them.
+            className={cn('mt-4 pt-4', i > 0 && 'border-rule border-t')}
+          >
+            {/*
+              One header line per service: what it is on the left, the task that
+              delivered it on the right.
+
+              The ClickUp field had its own label, its own "optional" marker and
+              a full-width input, which is three lines of chrome around one
+              rarely-typed id — repeated for every service. Here it is labelled
+              by its placeholder and sized to what it holds.
+            */}
+            <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
               <span className="text-dense font-medium">{service.name}</span>
               <span className="text-ink-faint text-micro">
                 {formatCategory(service.category)}
               </span>
-            </div>
 
-            {/* One task per service, sitting with the work it tracks. */}
-            <div className="mb-3 max-w-[22rem]">
-              <Field
-                label="ClickUp task"
-                htmlFor={`clickup-${value.key}-${serviceId}`}
-                optional
-              >
-                <Input
-                  id={`clickup-${value.key}-${serviceId}`}
-                  value={value.clickupByService[serviceId] ?? ''}
-                  placeholder="ID or URL"
-                  onChange={(e) =>
-                    onChange({
-                      ...value,
-                      clickupByService: {
-                        ...value.clickupByService,
-                        [serviceId]: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </Field>
+              <Input
+                id={`clickup-${value.key}-${serviceId}`}
+                aria-label={`ClickUp task for ${service.name}`}
+                value={value.clickupByService[serviceId] ?? ''}
+                placeholder="ClickUp ID or URL"
+                className="ml-auto h-8 w-full text-micro sm:w-[13rem]"
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    clickupByService: {
+                      ...value.clickupByService,
+                      [serviceId]: e.target.value,
+                    },
+                  })
+                }
+              />
             </div>
 
             <VariationRows
