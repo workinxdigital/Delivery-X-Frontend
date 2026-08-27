@@ -44,12 +44,19 @@ export function VariationRows({
   onChange,
   allowance,
   errors,
+  showLabels = true,
 }: {
   variations: VariationDraft[]
   onChange: (next: VariationDraft[]) => void
   /** The selected agency's allowance, used for the live within/beyond readout. */
   allowance: number | undefined
   errors: Record<string, string>
+  /**
+   * Column headings, worth stating once rather than above every service.
+   * Repeated per service they became noise: five services meant reading
+   * "Complexity" and "Revisions" five times to fill in five identical rows.
+   */
+  showLabels?: boolean
 }) {
   const update = (i: number, patch: Partial<VariationDraft>) =>
     onChange(variations.map((v, j) => (j === i ? { ...v, ...patch } : v)))
@@ -75,12 +82,14 @@ export function VariationRows({
   return (
     <div className="space-y-1.5">
       {/* Labels once for the section, aligned to the row grid. */}
-      <div className={cn(GRID, 'hidden sm:grid')}>
-        <span />
-        <span className="text-ink-muted text-micro">Complexity</span>
-        <span className="text-ink-muted text-micro">Revisions</span>
-        <span />
-      </div>
+      {showLabels && (
+        <div className={cn(GRID, 'hidden sm:grid')}>
+          <span />
+          <span className="text-ink-muted text-micro">Complexity</span>
+          <span className="text-ink-muted text-micro">Revisions</span>
+          <span />
+        </div>
+      )}
 
       {variations.map((variation, i) => (
         <div key={i} className={cn(GRID, 'items-start')}>
@@ -151,18 +160,23 @@ export function VariationRows({
             Add variation
           </button>
 
-          {allowance !== undefined && total > 0 && (
-            <p className="text-ink-faint text-micro">
-              {total} revision{total === 1 ? '' : 's'}, allowance {allowance}.{' '}
-              {/* Two readings, so both are stated rather than picking one. */}
-              <span className={perVariation > 0 ? 'text-beyond font-medium' : undefined}>
-                {perVariation} beyond per variation
-              </span>
-              {', '}
-              <span className={perDelivery > 0 ? 'text-beyond font-medium' : undefined}>
-                {perDelivery} per delivery
-              </span>
-              .
+          {/*
+            Only when the allowance has actually been passed.
+            
+            It used to read "2 revisions, allowance 3. 0 beyond per variation, 0
+            per delivery." on every service — restating the number you just typed
+            and two zeros, on every line, which is how five services became a
+            wall of text. Silence means within allowance; the sentence appears
+            when there is something to say.
+          */}
+          {allowance !== undefined && (perVariation > 0 || perDelivery > 0) && (
+            <p className="text-beyond text-micro">
+              {perVariation > 0 ? `${perVariation} beyond allowance` : null}
+              {perVariation > 0 && perDelivery !== perVariation ? ' per variation' : null}
+              {perVariation > 0 && perDelivery > 0 && perDelivery !== perVariation ? ', ' : null}
+              {perDelivery > 0 && perDelivery !== perVariation
+                ? `${perDelivery} per delivery`
+                : null}
             </p>
           )}
         </div>

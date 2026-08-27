@@ -1,5 +1,7 @@
 'use client'
 
+import { useId } from 'react'
+
 import { AsinInput } from '@/components/asin-input'
 import { Field } from '@/components/field'
 import { MultiSelect, type MultiOption } from '@/components/multi-select'
@@ -77,18 +79,29 @@ export function AsinSection({
   onRemove: () => void
   removable: boolean
 }) {
+  /**
+   * Stable ids for the labels.
+   *
+   * These were built from the draft's `key`, which comes from a module-level
+   * counter — so the server rendered "asin-1" and the browser "asin-2", and
+   * every load of this form logged a hydration mismatch. useId gives the same
+   * value on both sides. The `key` stays what it is for: React list identity,
+   * never rendered into the DOM.
+   */
+  const uid = useId()
+
   return (
     <div className="border-rule bg-surface shadow-card rounded-xl border p-4">
       <div className="mb-3 flex items-start gap-4">
         <div className="grid grow gap-4 sm:grid-cols-2">
           <Field
             label={`ASIN ${index + 1}`}
-            htmlFor={`asin-${value.key}`}
+            htmlFor={`${uid}-asin`}
             optional
             error={errors.code}
           >
             <AsinInput
-              id={`asin-${value.key}`}
+              id={`${uid}-asin`}
               brandId={brandId}
               value={value.code}
               onChange={(code) => onChange({ ...value, code })}
@@ -114,12 +127,12 @@ export function AsinSection({
           */}
           <Field
             label="Product name"
-            htmlFor={`product-${value.key}`}
+            htmlFor={`${uid}-product`}
             optional
             error={errors.productName}
           >
             <Input
-              id={`product-${value.key}`}
+              id={`${uid}-product`}
               value={value.productName}
               placeholder="What the product is called"
               onChange={(e) => onChange({ ...value, productName: e.target.value })}
@@ -141,12 +154,12 @@ export function AsinSection({
 
       <Field
         label="What shipped"
-        htmlFor={`services-${value.key}`}
+        htmlFor={`${uid}-services`}
         error={errors.serviceIds}
         hint="Each service picked here gets its own variations."
       >
         <MultiSelect
-          id={`services-${value.key}`}
+          id={`${uid}-services`}
           options={serviceOptions}
           values={value.serviceIds}
           invalid={Boolean(errors.serviceIds)}
@@ -169,62 +182,95 @@ export function AsinSection({
         if (!service) return null
 
         return (
+          /*
+           * One row per service, on a two-column grid: what was delivered, then
+           * how it was made.
+           *
+           * Everything used to start at a different x — the service name at the
+           * card edge, the labels indented, the add link somewhere else again,
+           * and the ClickUp box floated hard right where it was the loudest
+           * thing in the block despite being the least important field in it.
+           *
+           * The grid fixes the ragged edge and puts the fields in order of
+           * weight: the service identifies the row, the complexity and revision
+           * count are the record, and the ClickUp id is a pointer to somewhere
+           * else — so it sits last, quiet, and only draws a border when you
+           * reach for it.
+           */
           <div
             key={serviceId}
-            // A hairline between services rather than padding: the blocks are
-            // short, and space alone did not group them.
-            className={cn('mt-4 pt-4', i > 0 && 'border-rule border-t')}
+            className={cn(
+              'grid gap-x-5 gap-y-2 pt-3.5 sm:grid-cols-[10rem_minmax(0,1fr)]',
+              i > 0 ? 'border-rule mt-3.5 border-t' : 'mt-1',
+            )}
           >
-            {/*
-              One header line per service: what it is on the left, the task that
-              delivered it on the right.
-
-              The ClickUp field had its own label, its own "optional" marker and
-              a full-width input, which is three lines of chrome around one
-              rarely-typed id — repeated for every service. Here it is labelled
-              by its placeholder and sized to what it holds.
-            */}
-            <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="text-dense font-medium">{service.name}</span>
-              <span className="text-ink-faint text-micro">
+            <div className="sm:pt-0.5">
+              <div className="text-dense font-medium">{service.name}</div>
+              <div className="text-ink-faint text-micro">
                 {formatCategory(service.category)}
-              </span>
+              </div>
+            </div>
 
-              <Input
-                id={`clickup-${value.key}-${serviceId}`}
-                aria-label={`ClickUp task for ${service.name}`}
-                value={value.clickupByService[serviceId] ?? ''}
-                placeholder="ClickUp ID or URL"
-                className="ml-auto h-8 w-full text-micro sm:w-[13rem]"
-                onChange={(e) =>
+            <div>
+              <VariationRows
+                variations={value.variationsByService[serviceId] ?? []}
+                // Stated once per ASIN, above the first service only.
+                showLabels={i === 0}
+                onChange={(next) =>
                   onChange({
                     ...value,
-                    clickupByService: {
-                      ...value.clickupByService,
-                      [serviceId]: e.target.value,
+                    variationsByService: {
+                      ...value.variationsByService,
+                      [serviceId]: next,
                     },
                   })
                 }
+                allowance={allowance}
+                // Namespaced per service so two sections cannot light each
+                // other's fields up.
+                errors={Object.fromEntries(
+                  Object.entries(errors)
+                    .filter(([k]) => k.startsWith(`${serviceId}.`))
+                    .map(([k, v]) => [k.slice(serviceId.length + 1), v]),
+                )}
               />
-            </div>
 
-            <VariationRows
-              variations={value.variationsByService[serviceId] ?? []}
-              onChange={(next) =>
-                onChange({
-                  ...value,
-                  variationsByService: { ...value.variationsByService, [serviceId]: next },
-                })
-              }
-              allowance={allowance}
-              // Namespaced per service so two sections cannot light each
-              // other's fields up.
-              errors={Object.fromEntries(
-                Object.entries(errors)
-                  .filter(([k]) => k.startsWith(`${serviceId}.`))
-                  .map(([k, v]) => [k.slice(serviceId.length + 1), v]),
-              )}
-            />
+              {/*
+                Indented to 2rem: the variation grid reserves a 1.25rem number
+                track plus a 0.75rem gap before its content, so the segmented
+                control, the add link and this all start at the same x. Without
+                it this row sat 24px to their left, which is most of what read as
+                "everything is here and there".
+              */}
+              <div className="mt-1.5 flex items-baseline gap-2 pl-8">
+                <label
+                  htmlFor={`${uid}-clickup-${serviceId}`}
+                  className="text-ink-faint shrink-0 text-micro"
+                >
+                  ClickUp
+                </label>
+                {/*
+                  Borderless until hovered or focused. It is optional, usually
+                  empty, and a full bordered field for it competed with the
+                  controls that actually carry the record.
+                */}
+                <input
+                  id={`${uid}-clickup-${serviceId}`}
+                  value={value.clickupByService[serviceId] ?? ''}
+                  placeholder="task ID or URL"
+                  className="text-ink placeholder:text-ink-faint hover:border-control focus:border-control w-full max-w-[20rem] border-b border-transparent bg-transparent pb-0.5 text-micro transition-colors duration-[120ms] outline-none"
+                  onChange={(e) =>
+                    onChange({
+                      ...value,
+                      clickupByService: {
+                        ...value.clickupByService,
+                        [serviceId]: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+            </div>
           </div>
         )
       })}
