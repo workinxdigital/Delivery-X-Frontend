@@ -342,7 +342,9 @@ export function LogDeliveryForm() {
           />
         </Field>
 
-        <div className="space-y-4">
+        {/* Cards carry their own padding now, so they need more room between
+            them than the fields inside them. */}
+        <div className="space-y-5">
           {form.asins.map((asin, index) => (
             <AsinSection
               key={asin.key}

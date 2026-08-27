@@ -57,7 +57,7 @@ const TIERS: { value: Complexity; label: string }[] = (
  * squeezing on a narrow window, since a segmented control and two inputs have a
  * floor below which they stop being usable.
  */
-const CELL = 'px-2 py-2 align-top first:pl-0 last:pr-0'
+const CELL = 'px-2.5 py-3 align-top first:pl-0 last:pr-0'
 
 /**
  * One product listing and everything shipped for it.
@@ -122,7 +122,7 @@ export function AsinSection({
         Header: which product this is. Tinted and ruled off, so the card reads as
         "this listing", then "what shipped for it".
       */}
-      <div className="border-rule bg-wash/50 rounded-t-xl border-b px-4 py-3.5">
+      <div className="border-rule bg-wash/50 rounded-t-xl border-b px-5 py-4">
         <div className="flex items-start gap-4">
           <div className="grid grow gap-3 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
             <Field
@@ -176,7 +176,7 @@ export function AsinSection({
         </div>
       </div>
 
-      <div className="px-4 py-3.5">
+      <div className="px-5 py-5">
         <Field
           label="What shipped"
           htmlFor={`${uid}-services`}
@@ -210,7 +210,7 @@ export function AsinSection({
           /* Scrolls rather than squeezes: below a certain width a segmented
              control and two inputs stop being usable, and a table that shrinks
              them to fit is worse than one you nudge sideways. */
-          <div className="-mx-2 mt-4 overflow-x-auto px-2">
+          <div className="-mx-2.5 mt-6 overflow-x-auto px-2.5">
             <table className="w-full min-w-[40rem] border-collapse text-dense">
               <thead>
                 <tr className="border-rule border-b">
@@ -246,7 +246,7 @@ export function AsinSection({
                      rather than between variations of the same one. */
                   <tbody key={serviceId} className="border-rule border-b last:border-0">
                     {variations.map((variation, i) => (
-                      <tr key={i}>
+                      <tr key={i} className={cn(i > 0 && '[&>td]:pt-1')}>
                         <td className={cn(CELL, 'min-w-0')}>
                           {/*
                             The service names itself once. Further variations say
@@ -357,7 +357,7 @@ export function AsinSection({
                     {/* The action sits under the service it belongs to. */}
                     <tr>
                       <td />
-                      <td className={cn(CELL, 'pt-0 pb-3')} colSpan={4}>
+                      <td className={cn(CELL, 'pt-1 pb-4')} colSpan={4}>
                         <div className="flex flex-wrap items-baseline gap-x-3">
                           <button
                             type="button"
@@ -400,7 +400,7 @@ function Th({ children }: { children: React.ReactNode }) {
   return (
     <th
       scope="col"
-      className="text-ink-muted px-2 pb-1.5 text-left text-micro font-medium tracking-[0.04em] whitespace-nowrap uppercase first:pl-0"
+      className="text-ink-muted px-2.5 pb-2.5 text-left text-micro font-medium tracking-[0.04em] whitespace-nowrap uppercase first:pl-0"
     >
       {children}
     </th>
