@@ -20,11 +20,12 @@ DeliverX records **facts about delivered work**: who, what, how many, how comple
 
 **Pricing exists in exactly one place, and it is not the ledger.** The original rule here was "no pricing anywhere in this system". The owner reversed it on **2026-08-25**, asking for an admin-only pricing calculator so the monthly value of what shipped can be read here instead of rebuilt in a spreadsheet. The boundaries of that reversal are the important part:
 
-- The **only** table holding money is `service_rates` — a rate card an admin fills in by hand.
+- The **only** table holding money is `service_rates` — a rate card an admin fills in by hand, keyed by **service and complexity tier**, because the same service is worth different amounts at Low and at High.
 - **No task, agency, brand, ASIN or revision round carries an amount.** Nothing in the ledger changed.
 - Because of that, a rate typed today re-prices last month rather than rewriting it. The ledger says what shipped; the calculator says what that was worth, and the two are never entangled.
 - The calculator is behind `requireAdmin`, like the rest of the admin router.
-- Amounts are stored as integers in the currency's minor unit. Money in floating point drifts across hundreds of rows.
+- **Currency is USD**, single and implicit. A second currency would be a column on the rate, not a formatting change, and that is a product decision.
+- Amounts are stored as integers in cents. Money in floating point drifts across hundreds of rows.
 
 Anything beyond that — invoices, tax, payment status, per-agency rate overrides, a second currency — is still out of scope. If a feature request would put an amount on a delivery record, stop and raise it before building.
 
@@ -238,9 +239,19 @@ Per period: summary of everything delivered, grouped by agency and service. Lock
 ### 5.7 Pricing calculator (admin only)
 Added 2026-08-25, reversing the original no-pricing rule — see §1 for what that does and does not permit.
 
-**Rate card.** One row per service, three amounts: the service delivered once, each variation beyond the first, and each revision round past the agency's free allowance. Saved per service, audited like every other admin change. Zero means free; a blank is refused rather than stored as zero, because a rate that silently became 0 would understate every total built on it.
+**Rate card.** One block per service, four rows — Low, Medium, High, Standalone — each with two amounts: the price of one variation at that tier, and the price of one revision round past the agency's free allowance on such a variation. Saved per service rather than per cell, since deciding what a service is worth means deciding all four tiers in one sitting. Audited like every other admin change. Zero means free; a blank is refused rather than stored as zero, because a rate that silently became 0 would understate every total built on it.
 
-**The month.** Deliveries in a date range, priced and grouped by service, with the counts beside the money so a number can be explained. Services delivered with no rate set are **named, not priced at zero** — a total that looks complete while omitting half the month's work is the worst thing this screen could do.
+**The maths.** Complexity lives on the variation (§2.4), so a rate prices a variation and a delivery is the sum of its variations:
+
+```
+for each variation:
+  perVariation(service, tier)
+  + max(0, rounds − allowanceSnapshot) × perExtraRevision(service, tier)
+```
+
+More variations therefore cost more, and a High variation costs more than a Low one. The allowance is the one snapshotted onto the task when it was logged (§2.6), so changing an agency's allowance never re-prices its history.
+
+**The month.** Deliveries in a date range, priced and grouped by service, with the counts beside the money so a number can be explained. Service-and-tier combinations delivered with no rate set are **named, not priced at zero** — a total that looks complete while omitting work is the worst thing this screen could do.
 ---
 
 ## 6. Tech stack

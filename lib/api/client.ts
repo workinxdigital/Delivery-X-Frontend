@@ -271,11 +271,9 @@ export const getServiceRates = () =>
 
 export const saveServiceRate = (payload: {
   serviceId: string
-  base: string
-  perVariation: string
-  perExtraRevision: string
+  tiers: { complexity: string; perVariation: string; perExtraRevision: string }[]
 }) =>
-  apiFetch<{ rate: { id: string } }>('/admin/service-rates', {
+  apiFetch<{ ok: true }>('/admin/service-rates', {
     method: 'PUT',
     body: JSON.stringify(payload),
   })

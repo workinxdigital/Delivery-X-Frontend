@@ -333,17 +333,18 @@ export type AdminBrand = {
   asinCount: number
 }
 
-/** A service and what an admin says it is worth. Amounts are minor units. */
+/** A service and what an admin says each of its tiers is worth (minor units). */
 export type ServiceRateRow = {
   serviceId: string
   serviceName: string
   category: string
   active: boolean
-  hasRate: boolean
-  baseMinor: number
-  perVariationMinor: number
-  perExtraRevisionMinor: number
-  notes: string | null
+  tiers: {
+    complexity: Complexity
+    hasRate: boolean
+    perVariationMinor: number
+    perExtraRevisionMinor: number
+  }[]
   updatedAt: string | null
 }
 
@@ -355,23 +356,24 @@ export type PricingSummary = {
     serviceId: string
     serviceName: string
     category: string
-    hasRate: boolean
     deliveries: number
     variations: number
     extraRounds: number
-    baseMinor: number
     variationsMinor: number
     revisionsMinor: number
     totalMinor: number
+    unpricedVariations: number
+    missingTiers: string[]
   }[]
   totals: {
     deliveries: number
     variations: number
     extraRounds: number
-    baseMinor: number
     variationsMinor: number
     revisionsMinor: number
     totalMinor: number
+    unpricedVariations: number
   }
-  unpriced: { serviceId: string; serviceName: string; deliveries: number }[]
+  /** Service and tier combinations delivered with no rate set. */
+  gaps: { serviceId: string; serviceName: string; variations: number; tiers: string[] }[]
 }

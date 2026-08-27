@@ -110,13 +110,13 @@ export function formatCategory(raw: string): string {
 }
 
 /**
- * The currency symbol, in one place.
+ * The currency, in one place. USD (owner, 2026-08-25).
  *
  * A single implicit currency, since the rate card is one card. If a second one
  * is ever needed it becomes a column on the rate rather than a constant here,
  * and that is a product decision rather than a formatting one.
  */
-export const CURRENCY = '₹'
+export const CURRENCY = '$'
 
 /**
  * Amounts arrive from the API as integers in the minor unit — money in floats
@@ -127,7 +127,7 @@ export function formatMoneyMinor(minor: number, withSymbol = true): string {
   const abs = Math.abs(Math.trunc(minor))
   const major = Math.floor(abs / 100)
   const cents = abs % 100
-  const body = `${major.toLocaleString('en-IN')}.${String(cents).padStart(2, '0')}`
+  const body = `${major.toLocaleString('en-US')}.${String(cents).padStart(2, '0')}`
   return `${minor < 0 ? '-' : ''}${withSymbol ? CURRENCY : ''}${body}`
 }
 
