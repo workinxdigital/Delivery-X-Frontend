@@ -79,7 +79,16 @@ export function Band({
           {title}
         </span>
       </h2>
-      <div className="space-y-4">{children}</div>
+      {/*
+        min-w-0, because this is the grid item.
+
+        A grid item's default `min-width: auto` is its content's minimum, so a
+        wide child — the delivery form's service table — pushed this column past
+        its `1fr` share and widened every field in the band with it. Zero lets
+        the column take its width from the grid, and any child that needs more
+        room scrolls inside its own overflow container.
+      */}
+      <div className="min-w-0 space-y-4">{children}</div>
     </section>
   )
 }

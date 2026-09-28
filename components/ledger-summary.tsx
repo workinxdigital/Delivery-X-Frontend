@@ -119,7 +119,7 @@ export function LedgerSummary({ filters }: { filters: TaskFilters }) {
                   label={<span className="font-medium">{row.agencyName}</span>}
                   primary={row.deliveries}
                   share={row.deliveries / topAgency}
-                  barClass="bg-tier-2"
+                  barClass="bg-tier-2-bar"
                   secondary={[
                     { label: 'variations', value: row.variations },
                     { label: 'revisions', value: row.revisionRounds },
@@ -159,11 +159,19 @@ export function LedgerSummary({ filters }: { filters: TaskFilters }) {
 /** Low to Standalone, always. The database returns groups in whatever order it likes. */
 const TIER_ORDER: Complexity[] = ['LOW', 'MEDIUM', 'HIGH', 'STANDALONE']
 
+/*
+ * Bars use the tier's BAR value, not its capsule fill.
+ *
+ * The fills are a ground for lettering to sit on; drawn as a 6px bar on the
+ * wash track in the dark they land within a step of it and the proportion
+ * vanishes. Standalone was worse still — it was the wash itself, so the bar and
+ * its track were the same colour.
+ */
 const TIER_BAR: Record<Complexity, string> = {
-  LOW: 'bg-tier-1',
-  MEDIUM: 'bg-tier-2',
-  HIGH: 'bg-tier-3',
-  STANDALONE: 'bg-wash',
+  LOW: 'bg-tier-1-bar',
+  MEDIUM: 'bg-tier-2-bar',
+  HIGH: 'bg-tier-3-bar',
+  STANDALONE: 'bg-tier-standalone-bar',
 }
 
 function sortTiers<T extends { complexity: Complexity }>(rows: T[]): T[] {

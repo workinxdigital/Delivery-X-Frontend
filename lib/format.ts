@@ -48,12 +48,6 @@ export const COMPLEXITY_LABELS = {
   STANDALONE: 'Standalone',
 } as const
 
-export const STATUS_LABELS = {
-  DELIVERED: 'Delivered',
-  REVISION_IN_PROGRESS: 'In revision',
-  CLOSED: 'Closed',
-} as const
-
 /**
  * Collapse a delivery's variation complexities into something scannable.
  *
@@ -64,12 +58,14 @@ export const STATUS_LABELS = {
  * down the page, plus a full breakdown for the tooltip.
  */
 export function summarizeComplexities(list: (keyof typeof COMPLEXITY_LABELS)[]): {
-  /** Distinct tiers present, in severity order. One capsule each. */
+  /** Distinct tiers present, in severity order. */
   tiers: (keyof typeof COMPLEXITY_LABELS)[]
+  /** How many variations at each, so a strip can be drawn in proportion. */
+  counts: { tier: keyof typeof COMPLEXITY_LABELS; count: number }[]
   label: string
   detail: string
 } {
-  if (list.length === 0) return { tiers: [], label: '', detail: '' }
+  if (list.length === 0) return { tiers: [], counts: [], label: '', detail: '' }
 
   const counts = new Map<keyof typeof COMPLEXITY_LABELS, number>()
   for (const c of list) counts.set(c, (counts.get(c) ?? 0) + 1)
@@ -79,6 +75,7 @@ export function summarizeComplexities(list: (keyof typeof COMPLEXITY_LABELS)[]):
 
   return {
     tiers: present,
+    counts: present.map((tier) => ({ tier, count: counts.get(tier)! })),
     label: present.map((c) => COMPLEXITY_LABELS[c]).join(' + '),
     detail: present.map((c) => `${counts.get(c)} × ${COMPLEXITY_LABELS[c]}`).join(', '),
   }

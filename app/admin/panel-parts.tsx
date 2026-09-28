@@ -34,7 +34,16 @@ export function Th({
     <th
       scope="col"
       className={cn(
-        'text-ink-muted px-2 pb-2 text-micro font-medium whitespace-nowrap',
+        /*
+          Headings in the mono label voice used everywhere else, and with room
+          to breathe. They were 12px sentence case at 8px padding, which read as
+          another row of data rather than as the thing naming the columns.
+
+          first/last padding matches the cells below, so the first column starts
+          on the card's inner margin and the last one does not run into its edge
+          — which is what was clipping the PDF link out of view.
+        */
+        'th-cell text-ink-muted px-3 pt-3 pb-2.5 text-micro font-medium tracking-[0.06em] whitespace-nowrap uppercase first:pl-4 last:pr-4',
         align === 'right' ? 'text-right' : 'text-left',
       )}
     >
@@ -48,6 +57,7 @@ export function Td({
   align,
   control,
   className,
+  title,
 }: {
   children?: React.ReactNode
   align?: 'right'
@@ -64,13 +74,19 @@ export function Td({
    */
   control?: boolean
   className?: string
+  /** Tooltip for a cell whose content is truncated or needs its basis stated. */
+  title?: string
 }) {
   return (
     <td
+      title={title}
       className={cn(
-        'px-2 py-2.5 align-middle',
+        // Taller rows. At 10px vertical padding a table of eight rows was a
+        // block of text; the extra height is what lets the eye track across a
+        // row without a finger.
+        'px-3 py-3.5 align-middle first:pl-4 last:pr-4',
         align === 'right' ? 'text-right' : 'text-left',
-        control && (align === 'right' ? 'pr-0' : 'pl-0'),
+        control && (align === 'right' ? 'pr-1' : 'pl-1'),
         className,
       )}
     >

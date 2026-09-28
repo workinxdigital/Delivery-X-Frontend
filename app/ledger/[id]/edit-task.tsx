@@ -15,21 +15,22 @@ import {
   getUsers,
   updateTask,
 } from '@/lib/api/client'
-import type { Complexity, TaskDetail, TaskStatus } from '@/lib/api/types'
-import { todayInIST } from '@/lib/format'
+import type { Complexity, TaskDetail } from '@/lib/api/types'
 import { PrimaryButton } from '@/components/primary-button'
+import { isPM, useSession } from '@/components/session'
 
+/**
+ * Three tiers, and clearing them is the fourth answer.
+ *
+ * Standalone is not a degree of complexity — it is the absence of one, meaning
+ * the plain version of the service. So it is not offered as a button here
+ * either; clearing the control is how you say it, and STANDALONE is what gets
+ * stored.
+ */
 const COMPLEXITIES: { value: Complexity; label: string }[] = [
   { value: 'LOW', label: 'Low' },
   { value: 'MEDIUM', label: 'Medium' },
   { value: 'HIGH', label: 'High' },
-  { value: 'STANDALONE', label: 'Standalone' },
-]
-
-const STATUSES: ComboboxOption[] = [
-  { value: 'DELIVERED', label: 'Delivered' },
-  { value: 'REVISION_IN_PROGRESS', label: 'In revision' },
-  { value: 'CLOSED', label: 'Closed' },
 ]
 
 /**
@@ -54,13 +55,13 @@ export function EditTask({
   onDone: () => void
 }) {
   const queryClient = useQueryClient()
+  const { user } = useSession()
 
   const [agencyId, setAgencyId] = useState(task.agencyId)
   const [brandName, setBrandName] = useState(task.brandName)
   const [serviceId, setServiceId] = useState(task.serviceId)
   const [deliveredOn, setDeliveredOn] = useState(task.deliveredOn)
   const [deliveredById, setDeliveredById] = useState(task.deliveredById)
-  const [status, setStatus] = useState<TaskStatus>(task.status)
   const [clickupTaskId, setClickupTaskId] = useState(task.clickupTaskId ?? '')
   const [notes, setNotes] = useState(task.notes ?? '')
   const [reason, setReason] = useState('')
@@ -96,7 +97,8 @@ export function EditTask({
         ...(serviceId !== task.serviceId ? { serviceId } : {}),
         ...(deliveredOn !== task.deliveredOn ? { deliveredOn } : {}),
         ...(deliveredById !== task.deliveredById ? { deliveredById } : {}),
-        ...(status !== task.status ? { status } : {}),
+        /* No status here any more. The server derives it from the round
+           count, and the field it was editing is no longer shown (§5.3). */
         ...((clickupTaskId.trim() || null) !== task.clickupTaskId
           ? { clickupTaskId: clickupTaskId.trim() || null }
           : {}),
@@ -136,7 +138,7 @@ export function EditTask({
     const next: Record<string, string> = {}
     if (!brandName.trim()) next.brandName = 'Enter a brand'
     if (!deliveredOn) next.deliveredOn = 'Pick a date'
-    else if (deliveredOn > todayInIST()) next.deliveredOn = 'Cannot be in the future'
+
     setErrors(next)
     if (Object.keys(next).length > 0) return
     mutation.mutate()
@@ -190,33 +192,29 @@ export function EditTask({
           />
         </Field>
 
-        <Field label="Status">
-          <Combobox
-            options={STATUSES}
-            value={status}
-            clearable={false}
-            onChange={(v) => setStatus(v as TaskStatus)}
-          />
-        </Field>
-
-        <Field label="Delivered on" error={errors.deliveredOn}>
+        {/* Same field, same name as the form that created it (§5.3). */}
+        <Field label="Created on" error={errors.deliveredOn}>
           <Input
             type="date"
-            max={todayInIST()}
             value={deliveredOn}
             aria-invalid={Boolean(errors.deliveredOn)}
             onChange={(e) => setDeliveredOn(e.target.value)}
           />
         </Field>
 
-        <Field label="Delivered by">
-          <Combobox
-            options={users.map((u) => ({ value: u.id, label: u.name }))}
-            value={deliveredById}
-            clearable={false}
-            onChange={setDeliveredById}
-          />
-        </Field>
+        {/* Hidden for a PM, who delivers as themselves (§5.10). Offering it
+            here and not on the logging form would be one screen quietly
+            undoing the other. */}
+        {!isPM(user) && (
+          <Field label="Delivered by">
+            <Combobox
+              options={users.map((u) => ({ value: u.id, label: u.name }))}
+              value={deliveredById}
+              clearable={false}
+              onChange={setDeliveredById}
+            />
+          </Field>
+        )}
 
         <Field label="ClickUp task" optional>
           <Input
@@ -238,8 +236,9 @@ export function EditTask({
       {task.variations.length > 0 && (
         <div className="border-rule space-y-2 border-t pt-4">
           <p className="text-ink-muted text-micro">
-            Complexity per variation. Revision counts are not edited here: a round is a
-            dated record, so rounds are added on the timeline below.
+            Complexity per variation — or none, for the plain version of the service.
+            Revision counts are not edited here: a round is a dated record, so rounds are
+            added on the timeline below.
           </p>
           {task.variations.map((v) => (
             <div key={v.id} className="grid items-center gap-3 sm:grid-cols-[6rem_1fr]">
@@ -249,8 +248,18 @@ export function EditTask({
               <Segmented
                 name={`Complexity for variation ${v.variationNumber}`}
                 options={COMPLEXITIES}
-                value={complexities[v.id] ?? v.complexity}
-                onChange={(c) => setComplexities((prev) => ({ ...prev, [v.id]: c }))}
+                clearable
+                // STANDALONE is stored, but shown as nothing selected: the two
+                // are the same statement, and a button labelled Standalone made
+                // it look like a tier.
+                value={
+                  (complexities[v.id] ?? v.complexity) === 'STANDALONE'
+                    ? ''
+                    : (complexities[v.id] ?? v.complexity)
+                }
+                onChange={(c) =>
+                  setComplexities((prev) => ({ ...prev, [v.id]: c === '' ? 'STANDALONE' : c }))
+                }
               />
             </div>
           ))}

@@ -64,14 +64,28 @@ export function MultiSelect({
   // Group while preserving the catalogue's own order — sortOrder is set by
   // admins for a reason (§2.3).
   const grouped = useMemo(() => {
-    const groups: { name: string; items: MultiOption[] }[] = []
+    /*
+     * One group per name, in order of first appearance.
+     *
+     * This used to merge only CONSECUTIVE runs, which is fine while the source
+     * list is sorted by group and wrong the moment it is not: the service
+     * catalogue orders by category, but a bundle carries the group "Bundles"
+     * and sits in the middle of its category's run, splitting it. The list then
+     * rendered the heading "Video" twice and React reported two children with
+     * the same key — the duplicate heading being the actual bug, and the key
+     * collision only how it announced itself.
+     *
+     * First appearance still respects the catalogue's own order (§2.3): where
+     * the runs are already contiguous this behaves exactly as before.
+     */
+    const byName = new Map<string, MultiOption[]>()
     for (const option of filtered) {
       const name = option.group ?? ''
-      const last = groups.at(-1)
-      if (last && last.name === name) last.items.push(option)
-      else groups.push({ name, items: [option] })
+      const items = byName.get(name)
+      if (items) items.push(option)
+      else byName.set(name, [option])
     }
-    return groups
+    return [...byName].map(([name, items]) => ({ name, items }))
   }, [filtered])
 
   const flat = useMemo(() => grouped.flatMap((g) => g.items), [grouped])

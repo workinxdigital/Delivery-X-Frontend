@@ -37,7 +37,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
+    /*
+      suppressHydrationWarning is required by next-themes: it writes the theme
+      class onto <html> before React hydrates, so the server's markup and the
+      client's first pass legitimately differ on this one element.
+    */
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${display.variable} ${body.variable} ${mono.variable}`}
+    >
       <body className="min-h-screen">
         <Providers>
           <Nav />

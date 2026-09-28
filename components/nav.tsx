@@ -1,10 +1,12 @@
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import Image from 'next/image'
+import { Logo } from '@/components/logo'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { NotificationCentre } from '@/components/notification-centre'
 import { isAdmin, useSession } from '@/components/session'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { logoutRequest } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
@@ -36,26 +38,23 @@ export function Nav() {
   const links = LINKS.filter((l) => !l.adminOnly || isAdmin(user))
 
   return (
-    <header className="border-rule bg-paper/95 sticky top-0 z-40 border-b backdrop-blur-sm">
+    /*
+      The nav floats over the page as it scrolls, so it is glass — but a lighter
+      pour than a popover: it spans the full width and sits behind everything,
+      where a heavy blur would read as a smear rather than a surface.
+    */
+    <header className="border-rule bg-paper/85 sticky top-0 z-40 border-b backdrop-blur-md backdrop-saturate-150 dark:bg-paper/70">
       <div className="mx-auto flex w-full max-w-[1240px] items-stretch gap-6 px-6">
         {/*
           The company mark and the product name are two different things, so a
           rule separates them: WorkinX made this, DeliverX is what it is. The
-          logo is placed directly on the paper because this file is genuinely
-          transparent, so the brand's dark-lockup workaround does not apply.
+          mark swaps to the white-X artwork in the dark, which is what the brand
+          supplies that variant for.
         */}
         <div className="flex items-center gap-4 py-3">
           <Link href="/log" className="flex items-center" aria-label="DeliverX home">
-            <Image
-              src="/workinx-logo.png"
-              alt="WorkinX Digital"
-              width={720}
-              height={228}
-              priority
-              // 120px wide is the brand's stated minimum for legibility, which
-              // at this artwork's 3.16:1 ratio makes it 38px tall.
-              className="h-auto w-[120px]"
-            />
+            {/* 120px wide is the brand's stated minimum for legibility. */}
+            <Logo priority className="w-[120px]" />
           </Link>
 
           <span aria-hidden className="bg-rule h-6 w-px" />
@@ -90,9 +89,26 @@ export function Nav() {
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3 py-3">
+        <div className="ml-auto flex items-center gap-2 py-3">
+          {/* Outside the signed-in branch: the theme is a preference, not a
+              privilege, and it should not vanish while the session loads. */}
+          <ThemeToggle />
+
           {user ? (
             <>
+              {/*
+                Admin only (owner, 2026-08-29).
+
+                The feed is a window onto audit_log — everything the team did.
+                It was scoped so a PM saw only rows they were the actor on,
+                which made it a list of things they had just done themselves:
+                true, private, and of no use to anybody. Watching what the team
+                shipped is an owner's job (§5.4), so the bell belongs with the
+                rest of the admin surface. The API refuses the routes as well;
+                this only avoids rendering a bell that would answer 403.
+              */}
+              {isAdmin(user) && <NotificationCentre />}
+
               {/*
                 One capsule, not a name with the role stacked underneath it.
                 The two were usually saying the same thing twice — the admin
@@ -106,10 +122,25 @@ export function Nav() {
                 href="/account"
                 title={`Signed in as ${user.name} · ${user.role.toLowerCase()}`}
                 className={cn(
-                  'hidden items-center rounded-full px-3 py-1 text-dense whitespace-nowrap transition-colors duration-[120ms] sm:inline-flex',
+                  'hidden items-center gap-2 rounded-full border px-3 py-1.5 text-dense whitespace-nowrap transition-colors duration-[120ms] sm:inline-flex',
+                  /*
+                    Lime, filled.
+
+                    Lime is identity in this system and this capsule is the one
+                    place the product says who you are, so it takes the
+                    signature colour outright. It was a wash fill before, which
+                    could not work: --wash and --paper are two steps apart in
+                    lightness, so it read as a smudge rather than a control.
+
+                    Filled rather than lettered, and that is the rule — lime on
+                    paper has almost no contrast as text. Its text is `noir`
+                    rather than `ink` because ink inverts to near-white in dark
+                    mode while the lime fill does not, and light text on lime is
+                    unreadable in either theme.
+                  */
                   pathname.startsWith('/account')
-                    ? 'bg-ink text-paper'
-                    : 'bg-wash text-ink-muted hover:text-ink',
+                    ? 'border-ink bg-ink text-paper'
+                    : 'border-lime bg-lime text-noir hover:brightness-95',
                 )}
               >
                 {user.name}
@@ -118,7 +149,9 @@ export function Nav() {
                 type="button"
                 onClick={() => logout.mutate()}
                 disabled={logout.isPending}
-                className="border-control text-ink-muted hover:text-ink hover:bg-wash rounded-md border px-2.5 py-1.5 text-micro transition-colors duration-[120ms] disabled:opacity-50"
+                // Same height and radius as the capsule beside it, so the two
+                // read as a pair rather than two unrelated shapes.
+                className="border-rule-strong text-ink-muted hover:text-ink hover:border-control hover:bg-wash rounded-full border px-3 py-1.5 text-dense transition-colors duration-[120ms] disabled:opacity-50"
               >
                 {logout.isPending ? 'Signing out' : 'Sign out'}
               </button>

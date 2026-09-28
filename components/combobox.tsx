@@ -74,14 +74,28 @@ export function Combobox({
   // Group while preserving the catalogue's own order — sortOrder is set by
   // admins for a reason (§2.3), so alphabetical sorting would fight them.
   const grouped = useMemo(() => {
-    const groups: { name: string; items: ComboboxOption[] }[] = []
+    /*
+     * One group per name, in order of first appearance.
+     *
+     * This used to merge only CONSECUTIVE runs, which is fine while the source
+     * list is sorted by group and wrong the moment it is not: the service
+     * catalogue orders by category, but a bundle carries the group "Bundles"
+     * and sits in the middle of its category's run, splitting it. The list then
+     * rendered the heading "Video" twice and React reported two children with
+     * the same key — the duplicate heading being the actual bug, and the key
+     * collision only how it announced itself.
+     *
+     * First appearance still respects the catalogue's own order (§2.3): where
+     * the runs are already contiguous this behaves exactly as before.
+     */
+    const byName = new Map<string, ComboboxOption[]>()
     for (const option of filtered) {
       const name = option.group ?? ''
-      const last = groups.at(-1)
-      if (last && last.name === name) last.items.push(option)
-      else groups.push({ name, items: [option] })
+      const items = byName.get(name)
+      if (items) items.push(option)
+      else byName.set(name, [option])
     }
-    return groups
+    return [...byName].map(([name, items]) => ({ name, items }))
   }, [filtered])
 
   /** Flat order matching what is rendered, so the highlight index lines up. */
@@ -166,7 +180,7 @@ export function Combobox({
       </button>
 
       {open && (
-        <div className="bg-surface border-control absolute z-50 mt-1 w-full overflow-hidden rounded-md border shadow-[0_8px_24px_-8px_oklch(0.22_0.012_60_/_18%)]">
+        <div className="glass bg-surface border-control absolute z-50 mt-1 w-full overflow-hidden rounded-md border shadow-[0_8px_24px_-8px_oklch(0.22_0.012_60_/_18%)]">
           <div className="border-b p-1">
             <Input
               ref={searchRef}

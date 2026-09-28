@@ -1,12 +1,14 @@
 'use client'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import Image from 'next/image'
+import { Logo } from '@/components/logo'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { Field } from '@/components/field'
 import { PrimaryButton } from '@/components/primary-button'
 import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/password-input'
 import { ApiError, loginRequest } from '@/lib/api/client'
 
 /**
@@ -32,6 +34,16 @@ export function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
 
+  /*
+   * No account list.
+   *
+   * A dropdown of everyone's email sat here between 2026-08-27 and 2026-08-28.
+   * It was served publicly, because the login page has no session — so it
+   * published the staff email list to anyone who opened the site, which is half
+   * of every credential handed over before a password is typed. It went when
+   * the login was hardened (§5.10). Do not put it back.
+   */
+
   const mutation = useMutation({
     mutationFn: () => loginRequest(email.trim(), password),
     onSuccess: (user) => {
@@ -51,17 +63,12 @@ export function LoginForm() {
   return (
     <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center px-2 py-8">
       <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 w-full max-w-[24rem] motion-safe:duration-300">
-        <div className="mb-7 flex items-center">
-          <Image
-            src="/workinx-logo.png"
-            alt="WorkinX Digital"
-            width={720}
-            height={228}
-            priority
-            // 120px is the brand's stated minimum for legibility, which at this
-            // artwork's 3.16:1 ratio makes it 38px tall.
-            className="h-auto w-[120px]"
-          />
+        {/* The nav is hidden on this route, so the toggle lives beside the
+            mark — a preference should not require signing in first. */}
+        <div className="mb-7 flex items-center justify-between gap-4">
+          {/* 120px is the brand's stated minimum for legibility. */}
+          <Logo priority className="w-[120px]" />
+          <ThemeToggle />
         </div>
 
         <div className="border-rule bg-surface shadow-raised rounded-2xl border p-7">
@@ -91,9 +98,8 @@ export function LoginForm() {
             </Field>
 
             <Field label="Password" htmlFor="password">
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -101,8 +107,13 @@ export function LoginForm() {
             </Field>
 
             {/*
-              One message for every failure, matching the API. Saying which half
-              was wrong would let someone work out who has an account here.
+              One message for every failure, matching the API.
+
+              Account enumeration, again: saying which half was wrong would
+              reveal who has an account here. Repeated failures also lock the
+              account for a lengthening spell, and that message — the one case
+              where the API says something specific — arrives through the same
+              path as every other error.
 
               role="alert" so it is announced rather than only appearing, and it
               sits directly above the button where the eye already is after a

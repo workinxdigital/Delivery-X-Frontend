@@ -1,11 +1,13 @@
 'use client'
 
+import { ConfirmDialog } from '@/components/confirm-dialog'
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Combobox } from '@/components/combobox'
 import { Field } from '@/components/field'
-import { Pill } from '@/components/pill'
+import { AgencyTypePill } from '@/components/pill'
 import { Input } from '@/components/ui/input'
 import {
   ApiError,
@@ -15,6 +17,7 @@ import {
   updateAgency,
 } from '@/lib/api/client'
 import type { AdminAgency } from '@/lib/api/types'
+import { AgencyRates } from './agency-rates'
 import { GhostButton, PanelHeader, PrimaryButton, Td, Th } from './panel-parts'
 
 const TYPES = [
@@ -46,6 +49,18 @@ export function AgenciesPanel() {
   /** Which row is asking to confirm a delete. */
   const [confirming, setConfirming] = useState<string | null>(null)
   const [allowanceDraft, setAllowanceDraft] = useState('')
+  /**
+   * Whose rates are open, and whether they were just created.
+   *
+   * Adding an agency is two steps now (owner, 2026-08-27): the details, then
+   * what they pay. The second step opens by itself on a fresh agency, because
+   * the rates cannot be set before the agency exists to hang them on — and an
+   * admin who has just typed a partner's name is exactly the person who knows
+   * what that partner pays.
+   */
+  const [ratesFor, setRatesFor] = useState<{ id: string; name: string; fresh: boolean } | null>(
+    null,
+  )
 
   const { data: agencies = [], isLoading } = useQuery({
     queryKey: ['admin', 'agencies'],
@@ -71,9 +86,10 @@ export function AgenciesPanel() {
         freeRevisionAllowance: Number(draft.freeRevisionAllowance),
       }),
     onSuccess: (r) => {
-      toast(`${r.agency.name} added`)
+      toast(`${r.agency.name} added`, { description: 'Now set what they pay, or leave the house rates.' })
       setDraft(EMPTY)
       setAdding(false)
+      setRatesFor({ id: r.agency.id, name: r.agency.name, fresh: true })
       refresh()
     },
     onError,
@@ -106,8 +122,41 @@ export function AgenciesPanel() {
     onError,
   })
 
+  const pending = agencies.find((a) => a.id === confirming)
+
   return (
     <div>
+      {/*
+        The most destructive thing on the screen: an agency's deliveries cannot
+        stay in the ledger naming something this page says is gone, so they go
+        with it. That belongs in a dialog with the count spelled out, not in a
+        row of text buttons where a second click lands where the first one was.
+      */}
+      {pending && (
+        <ConfirmDialog
+          title={<>Delete {pending.name}?</>}
+          description="It stops being offered when logging, and its rate card goes with it. Everything is soft-deleted, so it can be restored in the database — and adding the same name again restores it rather than making a second one."
+          consequence={
+            pending.taskCount > 0
+              ? `Takes ${pending.taskCount} deliver${pending.taskCount === 1 ? 'y' : 'ies'}${
+                  pending.brandCount > 0
+                    ? ` and ${pending.brandCount} brand${pending.brandCount === 1 ? '' : 's'}`
+                    : ''
+                } with it.`
+              : undefined
+          }
+          confirmLabel="Delete"
+          pendingLabel="Deleting"
+          pending={remove.isPending}
+          onCancel={() => setConfirming(null)}
+          onConfirm={() => {
+            // force only when there is history to take along.
+            remove.mutate({ id: pending.id, force: pending.taskCount > 0 })
+            setConfirming(null)
+          }}
+        />
+      )}
+
       <PanelHeader
         title="Agencies and direct clients"
         note="The allowance is how many revision rounds are within contract. It is a count of free rounds, not a rate."
@@ -174,6 +223,28 @@ export function AgenciesPanel() {
         </form>
       )}
 
+      {ratesFor && (
+        <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+            <div>
+              <h3 className="text-dense font-medium">
+                {ratesFor.fresh ? `What ${ratesFor.name} pays` : `${ratesFor.name} rates`}
+              </h3>
+              <p className="text-ink-muted mt-0.5 text-micro">
+                Overrides the house rate card, per service and tier. Nothing here is stored
+                against a delivery, so changing a rate re-prices this agency&rsquo;s history
+                rather than rewriting it.
+              </p>
+            </div>
+            <GhostButton onClick={() => setRatesFor(null)}>
+              {ratesFor.fresh ? 'Done' : 'Close'}
+            </GhostButton>
+          </div>
+
+          <AgencyRates agencyId={ratesFor.id} agencyName={ratesFor.name} />
+        </section>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-dense">
           <thead>
@@ -183,7 +254,6 @@ export function AgenciesPanel() {
               <Th>Free revisions</Th>
               <Th>Status</Th>
               <Th>Deliveries</Th>
-              <Th>Brands</Th>
               <Th />
             </tr>
           </thead>
@@ -200,9 +270,7 @@ export function AgenciesPanel() {
               <tr key={a.id} className="border-rule hover:bg-wash border-b">
                 <Td className="font-medium">{a.name}</Td>
                 <Td>
-                  <Pill tone={a.type === 'DIRECT' ? 'outline' : 'neutral'}>
-                    {a.type === 'DIRECT' ? 'Direct' : 'Agency'}
-                  </Pill>
+                  <AgencyTypePill type={a.type} />
                 </Td>
                 <Td control>
                   {editing === a.id ? (
@@ -261,46 +329,32 @@ export function AgenciesPanel() {
                 <Td className="tabular">
                   {a.taskCount}
                 </Td>
-                <Td className="tabular">
-                  {a.brandCount}
-                </Td>
                 <Td align="right" control>
-                  {/*
-                    Delete is always offered, and confirming says what it takes
-                    with it: an agency's deliveries cannot stay in the ledger
-                    naming something this screen says is gone, so they go too.
-                    Everything is soft-deleted, so it is recoverable in the
-                    database rather than destroyed.
-                  */}
-                  {confirming === a.id ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      {a.taskCount > 0 && (
-                        <span className="text-beyond text-micro">
-                          Takes {a.taskCount} deliver{a.taskCount === 1 ? 'y' : 'ies'}
-                          {a.brandCount > 0 &&
-                            ` and ${a.brandCount} brand${a.brandCount === 1 ? '' : 's'}`}{' '}
-                          with it.
-                        </span>
-                      )}
-                      <GhostButton
-                        danger
-                        disabled={remove.isPending}
-                        onClick={() => {
-                          // force only when there is history to take along.
-                          remove.mutate({ id: a.id, force: a.taskCount > 0 })
-                          setConfirming(null)
-                        }}
-                      >
-                        {remove.isPending ? 'Deleting' : 'Confirm'}
-                      </GhostButton>
-                      <GhostButton onClick={() => setConfirming(null)}>Cancel</GhostButton>
-                    </span>
-                  ) : (
-                    /* Master data, so a stray click should not remove it. */
-                    <GhostButton danger onClick={() => setConfirming(a.id)}>
-                      Delete
+                  {/* Rates stay reachable after the agency was added. */}
+                  {confirming !== a.id && (
+                    <GhostButton
+                      onClick={() =>
+                        setRatesFor(
+                          ratesFor?.id === a.id
+                            ? null
+                            : { id: a.id, name: a.name, fresh: false },
+                        )
+                      }
+                      title={`What ${a.name} pays`}
+                    >
+                      Rates
                     </GhostButton>
                   )}
+
+                  {/*
+                    Delete asks in a dialog: an agency takes its deliveries with
+                    it, which is not a consequence to explain in a strip of small
+                    text buttons. Everything is soft-deleted, so it is
+                    recoverable in the database rather than destroyed.
+                  */}
+                  <GhostButton danger onClick={() => setConfirming(a.id)}>
+                    Delete
+                  </GhostButton>
                 </Td>
               </tr>
             ))}

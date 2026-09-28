@@ -1,0 +1,580 @@
+/*
+ * The delivery statement, designed for paper.
+ *
+ * Deliberately its own stylesheet rather than Tailwind utilities: a printed
+ * document has a different set of concerns from a screen — page breaks, ink
+ * economy, a fixed measure — and expressing those inline would bury them.
+ *
+ * The brand rules that shape it: warm paper, never pure white. Ink is near-black
+ * #161413, not #000. Lime is identity and marks the total; pink is action and
+ * therefore appears nowhere on a document nobody clicks.
+ *
+ * The masthead was a full-bleed noir band, which put a heavy black strip across
+ * the top of a document that is otherwise warm paper. The logo asset already
+ * carries its own black box, so the mark is its own lockup and the band is not
+ * needed to justify it.
+ */
+
+.statement {
+  background: #ece9e1;
+  min-height: 100vh;
+  padding-bottom: 3rem;
+}
+
+/*
+ * The app shell is wrong for a document.
+ *
+ * Every page sits inside a nav and a padded, max-width main. A statement wants
+ * the full width and no chrome, so the shell is neutralised — but only on the
+ * page that contains one, which is what :has() buys. Scoping it this way beats
+ * a route group here: the statement still wants the app's fonts, providers and
+ * session, and only its own geometry differs.
+ */
+body:has(.statement) main {
+  max-width: none;
+  padding: 0;
+}
+
+body:has(.statement) header {
+  /* Kept on screen so there is a way back; gone on paper. */
+  border-bottom: 1px solid #dcd7cc;
+}
+
+/* The sheet itself: A4 measure, centred, lifted off the surrounding grey. */
+/*
+ * One inner margin for the whole document.
+ *
+ * Every band below indents to this rather than restating its own number, so
+ * the left edge of the masthead, the lede, the stats, every table and the
+ * footer sit on one line down the page. They had drifted to 2.5rem each by
+ * repetition, which is the same value four times and four things to forget.
+ */
+.sheet {
+  --gutter: 3.25rem;
+
+  width: 100%;
+  max-width: 52rem;
+  margin: 1.5rem auto 0;
+  background: #f5f3ee;
+  color: #161413;
+  font-family: var(--font-sans);
+  padding: 0 0 3.5rem;
+  box-shadow: 0 12px 40px -12px rgb(22 20 19 / 22%);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------- masthead */
+
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.85rem var(--gutter);
+  /*
+   * The sage that fills the standalone capsule (--tier-standalone).
+   *
+   * Chosen because it is already this product's own off-the-ramp colour: it
+   * sits outside the Low/Medium/High tier ramp precisely so it can mean "a
+   * different kind of thing", which is what a masthead is on a page of figures.
+   * Reusing it ties the document to the screens rather than introducing a
+   * fourth tone that exists only here.
+   *
+   * Three earlier attempts, for anyone tempted to change it back: noir put a
+   * heavy black strip across a warm page; sand (#e6dcc4) read as a different
+   * material laid on the sheet; the app's wash was too close to the sheet to
+   * register at all.
+   */
+  background: #d6e5dd;
+  border-bottom: 1px solid #161413;
+}
+
+.masthead .mark {
+  height: 1.75rem;
+  width: auto;
+}
+
+.masthead-meta {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.masthead-range {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #161413;
+}
+
+/*
+ * The mono eyebrow. Ink rather than lime now that it sits on paper — lime on
+ * #f5f3ee is very nearly invisible, which is why the brand says lime identifies
+ * by filling and never by lettering. It survives on the total's rule instead.
+ */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6b655e;
+}
+
+/* -------------------------------------------------------------------- lede */
+
+.lede {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 2.75rem var(--gutter) 2rem;
+}
+
+.lede h1 {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin: 0.35rem 0 0;
+}
+
+.lede .sub {
+  color: #6b655e;
+  font-size: 0.8125rem;
+  margin: 0.4rem 0 0;
+}
+
+.total-block {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  /* The lime bar is the one identity mark on the page body. */
+  border-bottom: 3px solid #c9f24e;
+  padding-bottom: 0.35rem;
+}
+
+.total-block .eyebrow {
+  color: #6b655e;
+}
+
+.total {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.currency {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: #6b655e;
+  letter-spacing: 0.08em;
+}
+
+/* ------------------------------------------------------------------- stats */
+
+.stats {
+  display: grid;
+  border-top: 1px solid #dcd7cc;
+  border-bottom: 1px solid #dcd7cc;
+  margin: 0 var(--gutter);
+}
+
+.stats-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+/* Revisions not charged: the document simply does not discuss them. */
+.stats-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.stat {
+  padding: 1.15rem 1rem 1.15rem 0;
+}
+
+.stat + .stat {
+  padding-left: 1.35rem;
+  border-left: 1px solid #dcd7cc;
+}
+
+.stat-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #6b655e;
+  white-space: nowrap;
+}
+
+.stat-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.45rem;
+}
+
+/* --------------------------------------------------------------- delivery */
+
+/*
+ * The gap between two deliveries is what separates one job from the next.
+ *
+ * It was 1.4rem — barely more than the gap between a heading and its own
+ * table, so four blocks read as one long column of rules rather than as four
+ * things. The space above is now roughly double the space inside.
+ */
+.delivery {
+  padding: 2.75rem var(--gutter) 0;
+  /* Never split a delivery across two pages: a table of variations with its
+     heading on the previous sheet is unreadable. */
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.delivery-head {
+  border-bottom: 1px solid #161413;
+  padding-bottom: 0.85rem;
+}
+
+/*
+ * The task code, as a capsule.
+ *
+ * It is a reference number, not prose — the one thing on the block somebody
+ * quotes back at you — and set as loose grey mono above a bold heading it read
+ * as a stray line rather than a label. A filled capsule makes it an object.
+ *
+ * Neutral on purpose. The tier capsules below carry the page's only meaningful
+ * colour, and a coloured code would compete with them for a distinction it is
+ * not making. Borderless, like every other capsule here: on paper a fill and a
+ * hairline together read as a button.
+ */
+.delivery-head .code {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: #4a453e;
+  background: #e6e2d7;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+}
+
+.delivery-head h2 {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  /* Slightly more than the old 0.25rem: a capsule needs clearance below it in a
+     way a line of text does not. */
+  margin: 0.45rem 0 0;
+}
+
+.delivery-head .meta {
+  color: #6b655e;
+  font-size: 0.75rem;
+  margin: 0.35rem 0 0;
+}
+
+.unpriced {
+  font-size: 0.75rem;
+  color: #c2412e;
+  margin: 0.6rem 0 0;
+}
+
+/* ------------------------------------------------------------------ lines */
+
+.lines {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  /* Fixed, so every delivery's Rate and Amount sit on the same x down the whole
+     page. Auto layout sized each table to its own longest product name, which
+     made the money columns wander from block to block. */
+  table-layout: fixed;
+}
+
+.lines col.c-product {
+  width: 42%;
+}
+
+.lines col.c-tier {
+  width: 16%;
+}
+
+.lines col.c-num {
+  width: 21%;
+}
+
+.lines col.c-num-3 {
+  width: 14%;
+}
+
+/*
+ * With a revisions column the split changes: the product name gives up width it
+ * was not using so the equation — "2 × $200.00 = $400.00" — stays on one line.
+ *
+ * The revisions column was 23% and the equation ran straight into the amount
+ * beside it on any row with a real multiplier. It is the widest thing on the
+ * page and now sized for its worst case, not its average.
+ */
+.lines col.c-product-4 {
+  width: 29%;
+}
+
+.lines col.c-tier-4 {
+  width: 12%;
+}
+
+.lines col.c-rate {
+  width: 15%;
+}
+
+.lines col.c-rev {
+  width: 27%;
+}
+
+.lines th {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #6b655e;
+  text-align: left;
+  padding: 0.85rem 0.6rem 0.55rem 0;
+}
+
+/*
+ * Row height, which is most of what makes a table of figures readable.
+ *
+ * These were 0.45rem top and bottom: rows barely taller than their own text,
+ * so a block of four products read as a solid grey paragraph. Roughly doubled,
+ * and the last row carries extra below it so the block does not end flush
+ * against whatever follows.
+ */
+.lines td {
+  /*
+   * No left padding, and that is load-bearing: the headings above have none
+   * either, so every column's content starts on exactly the same x as the word
+   * naming it. Giving cells a symmetric 0.6rem while the headings kept 0 pushed
+   * every column a hair right of its own heading — invisible on a figure,
+   * obvious the moment a filled tier capsule sat under TIER.
+   *
+   * The gap between columns is carried on the right, and by .num's left padding
+   * where the next column is right-aligned.
+   */
+  padding: 0.7rem 0.6rem 0.7rem 0;
+  border-bottom: 1px solid #e4e0d6;
+  vertical-align: baseline;
+}
+
+.lines tr:last-child td {
+  border-bottom: 0;
+  padding-bottom: 0.15rem;
+}
+
+.lines .num {
+  text-align: right;
+  /* Right-aligned cells had no padding on either side, so a rate ran straight
+     into the revisions equation beside it. The gap belongs on the left, before
+     each figure, since the last column sits on the sheet's own margin. */
+  padding-left: 1.25rem;
+  padding-right: 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lines th.num {
+  padding-left: 1.25rem;
+}
+
+.lines th.num {
+  text-align: right;
+}
+
+.lines .strong {
+  font-weight: 600;
+}
+
+/*
+ * The variation's code (§2.5), leading its product name.
+ *
+ * Mono, like every other code on this page — the masthead's, the block's
+ * capsule, the figures. It was the sheet's body face, so `WX-2026-0043-2`
+ * read as part of the product name rather than as the identifier a client
+ * quotes back when they ask about one line.
+ */
+.lines .n {
+  color: #6b655e;
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  white-space: nowrap;
+  /* Mono carries tight side bearings, so a plain word space is not enough to
+     stop the code reading as the first syllable of the product name. */
+  margin-right: 0.2em;
+}
+
+.lines em {
+  color: #8b857c;
+  font-style: normal;
+}
+
+.lines .warn {
+  color: #c2412e;
+}
+
+.lines .dash {
+  color: #a9a396;
+}
+
+/*
+ * The working, inline and quieter than its result: "2 × $20.00 = $40.00".
+ *
+ * It was stacked above the amount, which made the cell two lines tall and the
+ * whole right side of the page read as a crowd.
+ */
+.calc {
+  white-space: nowrap;
+}
+
+.mult {
+  font-size: 0.6875rem;
+  color: #8b857c;
+}
+
+/* ------------------------------------------------------------------ tiers */
+
+.tier {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.6875rem;
+  white-space: nowrap;
+}
+
+.tier-low {
+  background: #e9e1cd;
+}
+
+.tier-medium {
+  background: #cddff8;
+}
+
+.tier-high {
+  background: #d8cbf7;
+}
+
+/* Off the ramp on purpose — a different kind of thing, not a fourth degree. */
+.tier-standalone {
+  background: #d6e5dd;
+}
+
+/* ------------------------------------------------------------- gaps, foot */
+
+.gaps {
+  margin: 2.75rem var(--gutter) 0;
+  padding: 1.1rem 1.25rem;
+  background: #fdf2ef;
+  border-left: 3px solid #c2412e;
+  break-inside: avoid;
+}
+
+.gaps p {
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: #161413;
+  margin: 0.45rem 0 0;
+}
+
+.empty {
+  padding: 2.5rem;
+  text-align: center;
+  color: #6b655e;
+  font-size: 0.875rem;
+}
+
+.foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 3.25rem var(--gutter) 0;
+  padding-top: 1rem;
+  border-top: 1px solid #dcd7cc;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  color: #6b655e;
+}
+
+/* ------------------------------------------------------------------ print */
+
+@page {
+  size: A4;
+  /* Room at the top and bottom of every printed sheet. The sides are the
+     sheet's own --gutter, so a page break never changes the left edge. */
+  margin: 14mm 0;
+}
+
+@media print {
+  /*
+   * Load-bearing. Browsers strip backgrounds by default, which would drop the
+   * noir masthead, the lime rule and every tier capsule — leaving a grey
+   * skeleton of this document. `exact` tells them not to.
+   */
+  .statement,
+  .statement * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /*
+   * The whole app header, not just the <nav> inside it.
+   *
+   * This hid `nav`, which is the links only — so the logo, the theme toggle,
+   * the notification bell, the account capsule and Sign out all printed across
+   * the top of a client's statement. The bar is a `<header>` containing a
+   * `<nav>`; hiding the child left the parent, and the parent is what shows.
+   */
+  .no-print,
+  body:has(.statement) header,
+  /*
+   * Anything floating over the page at the moment someone hits print.
+   *
+   * A toast or an open dialog is rendered at the layout level, outside the
+   * sheet, so it would print across a client's bill — and the one thing a
+   * statement must not carry is a stray piece of the app that produced it.
+   */
+  [data-sonner-toaster],
+  [role='dialog'] {
+    display: none !important;
+  }
+
+  .statement {
+    background: #fff;
+    padding: 0;
+  }
+
+  .sheet {
+    margin: 0;
+    max-width: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  /* Repeat column headings when a long delivery does break across pages. */
+  .lines thead {
+    display: table-header-group;
+  }
+
+  .foot {
+    break-inside: avoid;
+  }
+}

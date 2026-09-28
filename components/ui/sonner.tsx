@@ -5,11 +5,18 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  /*
+   * resolvedTheme, not theme.
+   *
+   * The default is "system", and passing that straight through left Sonner
+   * guessing at its own palette rather than following the one the page actually
+   * resolved to — which showed up as a light toast on a dark screen.
+   */
+  const { resolvedTheme } = useTheme()
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={(resolvedTheme ?? "light") as ToasterProps["theme"]}
       className="toaster group"
       icons={{
         success: (
@@ -36,6 +43,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }
+      // Long enough to read a generated task code and look away (§5.1).
+      duration={5000}
+      gap={10}
       toastOptions={{
         classNames: {
           toast: "cn-toast",

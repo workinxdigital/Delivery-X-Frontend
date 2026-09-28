@@ -40,9 +40,11 @@ export function PrimaryButton({
       // rather than only seeing the label change.
       aria-busy={pending || undefined}
       className={cn(
-        'bg-ink text-paper text-dense rounded-full font-medium',
-        'shadow-card transition-all duration-[120ms]',
-        'hover:shadow-raised active:translate-y-px',
+        // `cta` adds the material — a sheen down the fill and a lit top edge —
+        // in globals.css, where it can differ by theme without a conditional here.
+        'cta bg-ink text-paper text-dense rounded-full font-medium',
+        'transition-all duration-[120ms]',
+        'active:translate-y-px',
         'hover:bg-ink/90',
         // The focus ring is offset onto the paper so it reads against the
         // button's own black rather than disappearing into it.

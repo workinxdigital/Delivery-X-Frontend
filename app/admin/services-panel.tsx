@@ -1,5 +1,7 @@
 'use client'
 
+import { ConfirmDialog } from '@/components/confirm-dialog'
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -88,8 +90,29 @@ export function ServicesPanel() {
 
   const categories = [...new Set(services.map((s) => s.category))].sort()
 
+  const pending = services.find((s) => s.id === confirming)
+
   return (
     <div>
+      {/* Only ever reachable for a service nothing has been delivered under —
+          one with history says "In use · switch off" instead — so the dialog
+          can be short. It still asks, because deleting master data from a row
+          of small text buttons should not be one click away. */}
+      {pending && (
+        <ConfirmDialog
+          title={<>Delete {pending.name}?</>}
+          description="Nothing has been delivered under it, so no history depends on it. It disappears from the logging form and from this list."
+          confirmLabel="Delete"
+          pendingLabel="Deleting"
+          pending={remove.isPending}
+          onCancel={() => setConfirming(null)}
+          onConfirm={() => {
+            remove.mutate(pending.id)
+            setConfirming(null)
+          }}
+        />
+      )}
+
       <PanelHeader
         title="Service catalogue"
         note="Data, not code: anything added here appears on the logging form immediately, with no deploy."
@@ -244,20 +267,6 @@ export function ServicesPanel() {
                       title={`${s.taskCount} deliveries reference this service, so its history has to stay readable.`}
                     >
                       In use · switch off
-                    </span>
-                  ) : confirming === s.id ? (
-                    <span className="inline-flex items-center gap-1">
-                      <GhostButton
-                        danger
-                        disabled={remove.isPending}
-                        onClick={() => {
-                          remove.mutate(s.id)
-                          setConfirming(null)
-                        }}
-                      >
-                        {remove.isPending ? 'Deleting' : 'Confirm'}
-                      </GhostButton>
-                      <GhostButton onClick={() => setConfirming(null)}>Cancel</GhostButton>
                     </span>
                   ) : (
                     <GhostButton danger onClick={() => setConfirming(s.id)}>

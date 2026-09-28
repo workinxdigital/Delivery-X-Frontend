@@ -30,7 +30,7 @@ export type User = {
   id: string
   name: string
   email: string
-  role: 'OWNER' | 'ADMIN' | 'PM' | 'VIEWER'
+  role: Role
 }
 
 export type Brand = { id: string; name: string }
@@ -56,6 +56,13 @@ export type Task = {
   complexity: Complexity | null
   /** The tiers actually present, in variation order. */
   complexities: Complexity[]
+  /**
+   * Whether the first variation is the parent listing (§2.4).
+   *
+   * False when the delivery shipped for child SKUs only. Optional because the
+   * ledger list does not send it — only the detail and the priced rows do.
+   */
+  hasParentLine?: boolean
   variationCount: number
   variations: TaskVariation[]
   title: string | null
@@ -89,7 +96,20 @@ export type RevisionReason = { id: string; code: string; label: string }
 export type TaskVariation = {
   id: string
   variationNumber: number
+  /**
+   * Its own quotable code, derived from the delivery's (§2.5).
+   *
+   *   WX-2026-0043     the service against the parent listing
+   *   WX-2026-0043-1   its first child product
+   */
+  code: string
   complexity: Complexity
+  /** The CHILD product this variation shipped for, by name. */
+  productName: string | null
+  /** Its own listing code. Null on everything logged before 2026-08-31. */
+  asinCode: string | null
+  /** This variation's own ClickUp task. */
+  clickupTaskId: string | null
   revisionRoundCount: number
   /** Beyond this variation's own allowance. */
   roundsBeyondAllowance: number
@@ -129,18 +149,35 @@ export type AddRevisionRoundPayload = {
 }
 
 export type VariationPayload = {
-  complexity: Complexity
+  /**
+   * The tier, or null for none — which the server stores as STANDALONE, the
+   * plain version of the service rather than a fourth degree of complexity.
+   */
+  complexity: Complexity | null
+  /** The CHILD product this variation shipped for, by name, under the parent. */
+  productName?: string | null
+  /** This variation's own ClickUp task. */
+  clickupTaskId?: string | null
   /**
    * Becomes that many real revision_round records on this variation, each
    * classified against the agency's snapshotted allowance.
+   *
+   * Optional since the logging form stopped asking (§5.1): the server defaults
+   * it to 0, so a delivery starts with no rounds and gains them on its own
+   * record. Still accepted, so nothing that already sends it breaks.
    */
-  revisionCount: number
+  revisionCount?: number
   notes?: string | null
 }
 
 /** One delivered service within a submission, with its own variations. */
 export type DeliveryLinePayload = {
   serviceId: string
+  /**
+   * Whether the first variation below is the parent listing. Defaults true
+   * server-side, which is what every delivery logged before this was.
+   */
+  hasParentLine?: boolean
   /** The ClickUp task for this service. */
   clickupTaskId?: string | null
   /** At least one. variationCount is derived from this, never typed separately. */
@@ -149,7 +186,7 @@ export type DeliveryLinePayload = {
 
 /** One product listing and everything shipped for it. */
 export type AsinPayload = {
-  /** Optional: a delivery with no code simply has no ASIN attached. */
+  /** The PARENT listing. Optional: a delivery with no code has no ASIN attached. */
   code?: string | null
   /** What the product is called, for anyone reading the ledger later. */
   productName?: string | null
@@ -260,7 +297,13 @@ export type HistoryEntry = {
 
 // ---------------------------------------------------------------- auth
 
-export type Role = 'OWNER' | 'ADMIN' | 'PM' | 'VIEWER'
+/**
+ * Two roles since 2026-08-28 (§5.10).
+ *
+ * OWNER and VIEWER were removed: the owner is an admin, and a read-only account
+ * nobody had asked for was one more role to keep every gate in step with.
+ */
+export type Role = 'ADMIN' | 'PM'
 
 export type SessionUser = { id: string; name: string; email: string; role: Role }
 
@@ -323,16 +366,6 @@ export type TaskSummary = {
   }[]
 }
 
-/** A brand as the admin screen sees it, with what depends on it. */
-export type AdminBrand = {
-  id: string
-  name: string
-  agencyId: string
-  agencyName: string
-  taskCount: number
-  asinCount: number
-}
-
 /** A service and what an admin says each of its tiers is worth (minor units). */
 export type ServiceRateRow = {
   serviceId: string
@@ -348,23 +381,105 @@ export type ServiceRateRow = {
   updatedAt: string | null
 }
 
+/**
+ * One agency's rates for one service.
+ *
+ * Null is not zero: it means this tier is not priced for this agency, and the
+ * pricing screen names it rather than charging nothing for it. There is no
+ * house card behind these — it was removed on 2026-08-27.
+ */
+export type AgencyRateRow = {
+  serviceId: string
+  serviceName: string
+  category: string
+  active: boolean
+  tiers: {
+    complexity: Complexity
+    hasOverride: boolean
+    perVariationMinor: number | null
+    perExtraRevisionMinor: number | null
+  }[]
+  /** How many of the four tiers this agency has priced. */
+  overriddenTiers: number
+}
+
 /** What shipped in a date range, priced by service. */
+/** How the priced rollup is bucketed. */
+export type PricingGroupBy = 'agency' | 'brand' | 'service' | 'tier'
+
+/** One bucket of the rollup: whatever it is grouped by, the shape is the same. */
+export type PricingLine = {
+  key: string
+  label: string
+  /** Context the label alone lacks — a brand's agency, a service's category. */
+  sublabel: string | null
+  deliveries: number
+  variations: number
+  extraRounds: number
+  variationsMinor: number
+  revisionsMinor: number
+  totalMinor: number
+  unpricedVariations: number
+  missingTiers: string[]
+}
+
+/** A delivery from the ledger, priced. Identity columns, then money. */
+export type PricedDelivery = {
+  taskId: string
+  taskCode: string
+  /** Whether the first line is the parent listing (§2.4). */
+  hasParentLine?: boolean
+  deliveredOn: string
+  agencyId: string
+  agencyName: string
+  agencyType: string
+  brandId: string
+  brandName: string
+  asinCode: string | null
+  productName: string | null
+  serviceId: string
+  serviceName: string
+  isBundle: boolean
+  /** Whoever is named as having delivered it. */
+  delivererName: string | null
+  variations: number
+  tiers: Complexity[]
+  allowanceSnapshot: number
+  extraRounds: number
+  variationsMinor: number
+  revisionsMinor: number
+  totalMinor: number
+  /** Variations on this row delivered at a tier with no rate. Never priced as zero. */
+  unpricedVariations: number
+  /** The per-variation arithmetic behind totalMinor. */
+  lines: PricedLine[]
+}
+
+/** One variation's contribution to a delivery's price, with the rate used. */
+export type PricedLine = {
+  variationNumber: number
+  /** The variation's own code, so a priced line can be quoted (§2.5). */
+  code: string
+  productName: string | null
+  complexity: Complexity | null
+  rounds: number
+  /** Rounds past the allowance snapshotted on the delivery. */
+  paidRounds: number
+  /** The rate actually applied, so the arithmetic can be checked. Null if none. */
+  perVariationMinor: number | null
+  perExtraRevisionMinor: number | null
+  variationMinor: number
+  revisionsMinor: number
+  totalMinor: number
+  priced: boolean
+}
+
 export type PricingSummary = {
   from: string
   to: string
-  lines: {
-    serviceId: string
-    serviceName: string
-    category: string
-    deliveries: number
-    variations: number
-    extraRounds: number
-    variationsMinor: number
-    revisionsMinor: number
-    totalMinor: number
-    unpricedVariations: number
-    missingTiers: string[]
-  }[]
+  groupBy: PricingGroupBy
+  lines: PricingLine[]
+  deliveries: PricedDelivery[]
   totals: {
     deliveries: number
     variations: number
@@ -376,4 +491,85 @@ export type PricingSummary = {
   }
   /** Service and tier combinations delivered with no rate set. */
   gaps: { serviceId: string; serviceName: string; variations: number; tiers: string[] }[]
+}
+
+/** One entry in the notification centre, derived from an audit_log row. */
+export type Notification = {
+  id: string
+  kind: 'delivery' | 'revision' | 'pricing' | 'admin'
+  entity: string
+  entityId: string
+  action: string
+  actorName: string
+  title: string
+  detail: string | null
+  createdAt: string
+  unread: boolean
+  /** Only a task has somewhere to go; the rest are statements, not links. */
+  href: string | null
+}
+
+export type NotificationFeed = {
+  /** When this person last opened the panel. Null means never. */
+  seenAt: string | null
+  /** When they last cleared it. Entries older than this are hidden from them. */
+  clearedAt: string | null
+  entries: Notification[]
+}
+
+// ------------------------------------------------------------ team reports
+
+/** A person on the Team list, with their login account when they have one. */
+export type AdminDeliverer = {
+  id: string
+  name: string
+  taskCount: number
+  /** Null for the many Team members who never sign in (§5.5). */
+  account: { email: string; role: Role; active: boolean } | null
+}
+
+
+/**
+ * One person's delivery record (§5.5).
+ *
+ * No money on it. What someone's work was worth is a Pricing question, and the
+ * Pricing screen already filters by person — an amount here would be the ledger
+ * carrying a price, which §1 forbids.
+ */
+export type DelivererReport = {
+  person: {
+    id: string
+    name: string
+    active: boolean
+    addedOn: string
+    account: {
+      email: string
+      role: Role
+      active: boolean
+      createdAt: string
+      lastSeenAt: string | null
+      /** Set while a run of failed sign-ins has the account locked (§5.10). */
+      lockedUntil: string | null
+    } | null
+  }
+  totals: {
+    deliveries: number
+    variations: number
+    revisionRounds: number
+    roundsBeyondAllowance: number
+    edits: number
+  }
+  byAgency: { id: string; name: string; deliveries: number; variations: number }[]
+  byService: { id: string; name: string; deliveries: number; variations: number }[]
+  recent: {
+    id: string
+    taskCode: string
+    deliveredOn: string
+    agencyName: string
+    brandName: string
+    serviceName: string
+    variationCount: number
+    revisionRoundCount: number
+    roundsBeyondAllowance: number
+  }[]
 }

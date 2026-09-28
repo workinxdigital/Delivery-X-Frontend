@@ -7,6 +7,9 @@
  * them inline.
  */
 import type {
+  Role,
+  AdminDeliverer,
+  DelivererReport,
   AddRevisionRoundPayload,
   Agency,
   Brand,
@@ -20,10 +23,12 @@ import type {
   TaskFilters,
   TaskSummary,
   AdminAgency,
-  AdminBrand,
   AdminService,
+  NotificationFeed,
   PricingSummary,
+  PricingGroupBy,
   ServiceRateRow,
+  AgencyRateRow,
   AdminUser,
   SessionUser,
   TaskListResult,
@@ -98,6 +103,26 @@ function qs(params: Record<string, unknown>): string {
 }
 
 // ---------------------------------------------------------------- reference
+
+// ---------------------------------------------------------- notifications
+
+export const getNotifications = (limit = 40) =>
+  apiFetch<NotificationFeed>(`/notifications${qs({ limit })}`)
+
+export const getUnreadCount = () =>
+  apiFetch<{ unread: number }>('/notifications/unread-count').then((r) => r.unread)
+
+/**
+ * Clear this person's panel.
+ *
+ * Not a delete: audit_log is append-first (§4.2), so this moves their floor and
+ * hides older entries from their feed alone. Everyone else's is untouched.
+ */
+export const clearNotifications = () =>
+  apiFetch<{ clearedAt: string; seenAt: string }>('/notifications/clear', { method: 'POST' })
+
+export const markNotificationsSeen = () =>
+  apiFetch<{ seenAt: string }>('/notifications/seen', { method: 'POST' })
 
 export const getAgencies = () =>
   apiFetch<{ agencies: Agency[] }>('/agencies').then((r) => r.agencies)
@@ -269,6 +294,29 @@ export const deleteAgency = (id: string, force = false) =>
 export const getServiceRates = () =>
   apiFetch<{ services: ServiceRateRow[] }>('/admin/service-rates').then((r) => r.services)
 
+/**
+ * One agency's rate card (owner, 2026-08-27).
+ *
+ * A blank amount here means "use the house rate", not zero — which is the whole
+ * difference between this and the house card, where a blank is refused.
+ */
+export const getAgencyRates = (agencyId: string) =>
+  apiFetch<{ agencyId: string; agencyName: string; services: AgencyRateRow[] }>(
+    `/admin/agencies/${agencyId}/rates`,
+  )
+
+export const saveAgencyRate = (
+  agencyId: string,
+  payload: {
+    serviceId: string
+    tiers: { complexity: string; perVariation: string; perExtraRevision: string }[]
+  },
+) =>
+  apiFetch<{ ok: true }>(`/admin/agencies/${agencyId}/rates`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+
 export const saveServiceRate = (payload: {
   serviceId: string
   tiers: { complexity: string; perVariation: string; perExtraRevision: string }[]
@@ -278,20 +326,83 @@ export const saveServiceRate = (payload: {
     body: JSON.stringify(payload),
   })
 
-export const getPricing = (from: string, to: string) =>
-  apiFetch<PricingSummary>(`/admin/pricing${qs({ from, to })}`)
+/**
+ * What one delivery was worth, for the breakdown on its own record.
+ *
+ * The same server pass as the Pricing screen, narrowed to one task — so the
+ * figures on a task record and the row on Pricing are one arithmetic. The date
+ * range is the delivery's own day, since that is all this needs to cover.
+ */
+export const getTaskPricing = (taskId: string, deliveredOn: string) =>
+  apiFetch<PricingSummary>(
+    `/admin/pricing${qs({ from: deliveredOn, to: deliveredOn, groupBy: 'agency', taskId })}`,
+  ).then((r) => r.deliveries[0] ?? null)
+
+export const getPricing = (params: {
+  from: string
+  to: string
+  groupBy?: PricingGroupBy
+  agencyId?: string
+  delivererId?: string
+  /** One delivery, for a statement covering a single project (§5.7). */
+  taskId?: string
+  /** Only jobs with rounds past the allowance, or only those without. */
+  paidRounds?: 'with' | 'without'
+}) => apiFetch<PricingSummary>(`/admin/pricing${qs(params)}`)
 
 // ---------------------------------------------------------------- team
 
 export const getAdminDeliverers = () =>
-  apiFetch<{ deliverers: { id: string; name: string; taskCount: number }[] }>(
-    '/admin/deliverers',
-  ).then((r) => r.deliverers)
+  apiFetch<{ deliverers: AdminDeliverer[] }>('/admin/deliverers').then((r) => r.deliverers)
 
-export const createDeliverer = (name: string) =>
-  apiFetch<{ deliverer: { id: string; name: string; created: boolean } }>(
-    '/admin/deliverers',
-    { method: 'POST', body: JSON.stringify({ name }) },
+/**
+ * One person's deliveries and account, for the Team tab (§5.5).
+ *
+ * The counterpart to the privacy rule: a PM sees only their own work (§5.10),
+ * so an admin needs one screen that shows everyone's.
+ */
+export const getDelivererReport = (id: string, range?: { from?: string; to?: string }) =>
+  apiFetch<DelivererReport>(`/admin/deliverers/${encodeURIComponent(id)}/report${qs(range ?? {})}`)
+
+/**
+ * Add someone to the Team, optionally with a login.
+ *
+ * The login is opt-in because most of this list never signs in (§5.5). The
+ * mailbox and password travel; the DOMAIN does not — the server appends its own
+ * constant and drops anything after an `@`, so no request can create an account
+ * on a domain the company does not own. It returns the address and the password
+ * so the admin can pass them on; the password is never stored in the clear.
+ */
+export const createDeliverer = (
+  name: string,
+  /**
+   * Omit for a Team entry with no account. The mailbox and password are
+   * optional inside it — the server falls back to deriving both from the name.
+   */
+  login?: { emailLocal?: string; password?: string },
+) =>
+  apiFetch<{
+    deliverer: { id: string; name: string; created: boolean }
+    account: { id: string; email: string; role: Role; password: string } | null
+  }>('/admin/deliverers', {
+    method: 'POST',
+    body: JSON.stringify({ name, createLogin: Boolean(login), ...login }),
+  })
+
+/**
+ * Edit a person: their Team name, and their account when they have one.
+ *
+ * One request because the Team tab treats those as one person. The domain is
+ * not sent — only the mailbox — and the server appends its own constant, the
+ * same as on creation. Omitted fields are left alone.
+ */
+export const updateDeliverer = (
+  id: string,
+  patch: { name?: string; emailLocal?: string; password?: string; active?: boolean },
+) =>
+  apiFetch<{ deliverer: { id: string; name: string } }>(
+    `/admin/deliverers/${encodeURIComponent(id)}`,
+    { method: 'PATCH', body: JSON.stringify(patch) },
   )
 
 /** Soft delete: the name stops being offered, and its deliveries keep it. */
@@ -299,24 +410,6 @@ export const deleteDeliverer = (id: string) =>
   apiFetch<{ removed: { id: string; name: string; keptDeliveries: number } }>(
     `/admin/deliverers/${id}`,
     { method: 'DELETE' },
-  )
-
-// ---------------------------------------------------------------- brands
-
-export const getAdminBrands = (agencyId?: string) =>
-  apiFetch<{ brands: AdminBrand[] }>(`/admin/brands${qs({ agencyId })}`).then((r) => r.brands)
-
-export const renameBrand = (id: string, name: string) =>
-  apiFetch<{ brand: { id: string; name: string } }>(`/admin/brands/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ name }),
-  })
-
-/** `force` takes the brand's deliveries with it. Soft-deleted either way. */
-export const deleteBrand = (id: string, force = false) =>
-  apiFetch<{ removed: { id: string; name: string; tasksRemoved: number } }>(
-    `/admin/brands/${id}`,
-    { method: 'DELETE', body: JSON.stringify({ force }) },
   )
 
 export const getAdminServices = () =>

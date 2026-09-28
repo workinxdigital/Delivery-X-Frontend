@@ -4,10 +4,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ComplexityPill, Pill } from '@/components/pill'
+import { Pill } from '@/components/pill'
+import { TierStrip } from '@/components/tier-strip'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { ConfirmRemove } from '@/components/confirm-remove'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import {
   deleteTask,
   exportCsvUrl,
@@ -203,8 +204,16 @@ export function LedgerTable() {
       </div>
 
       {removing && (
-        <ConfirmRemove
-          taskCode={removing.taskCode}
+        <ConfirmDialog
+          title={
+            <>
+              Remove <span className="code">{removing.taskCode}</span>?
+            </>
+          }
+          description="It stops appearing in the ledger, the counts and the export. Nothing is erased: the record, its variations and its history are kept, and the removal is itself logged."
+          /* The one removal worth explaining later, so it takes a note onto its
+             audit entry (§4.2). */
+          reason
           pending={removal.isPending}
           onCancel={() => setRemoving(null)}
           onConfirm={(reason) => removal.mutate({ id: removing.id, reason })}
@@ -288,13 +297,15 @@ function Row({
         {task.asinCode ? <span className="code">{task.asinCode}</span> : '—'}
       </Td>
 
+      {/*
+        No "direct" chip here. Whether a client is DIRECT or an AGENCY is a
+        property of the client, not of this delivery — it is on the Admin tab
+        where it is set, and it is a filter on this screen. Repeated down fifty
+        rows it was noise that also ate the width this cell needs to spell out
+        "Mindfull Goods" instead of "Mindfull Goods…".
+      */}
       <Td className="text-ink-muted max-w-[16ch] truncate" title={task.agencyName}>
         {task.agencyName}
-        {task.agencyType === 'DIRECT' && (
-          <Pill tone="outline" className="ml-1.5">
-            direct
-          </Pill>
-        )}
       </Td>
 
       <Td className="max-w-[18ch] truncate whitespace-nowrap" title={task.serviceName}>
@@ -307,17 +318,11 @@ function Row({
       </Td>
 
       {/*
-        Count, then one capsule per distinct tier. Seven variations all at High
-        show a single "High" capsule rather than the word seven times; the full
-        breakdown is on hover.
+        The count, and the tier mix as a strip (see TierStrip for why it is not
+        capsules here). The full breakdown stays on the cell's tooltip.
       */}
       <Td className="whitespace-nowrap" title={mix.detail || undefined}>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="text-ink tabular">{task.variationCount}</span>
-          {mix.tiers.map((tier) => (
-            <ComplexityPill key={tier} complexity={tier} />
-          ))}
-        </span>
+        <TierStrip complexities={task.complexities} count={task.variationCount} />
       </Td>
 
       {/*
@@ -361,21 +366,37 @@ function Row({
         </span>
       </Td>
 
-      <Td className="text-ink-muted max-w-[14ch] truncate whitespace-nowrap">
-        {task.deliveredByName}
-        {task.editCount > 0 && (
-          <Pill
-            tone="outline"
-            className="ml-1.5"
-            title={
-              task.lastEditedAt
-                ? `Last edited ${formatTimestamp(task.lastEditedAt)}${task.lastEditedByName ? ` by ${task.lastEditedByName}` : ''}`
-                : undefined
-            }
-          >
-            edited {task.editCount}×
-          </Pill>
-        )}
+      {/*
+        The name truncates; the badge does not.
+        
+        They shared one truncating cell, so the edit badge ate the name's width
+        and "Almas" came out as "Almas…" on any row that had ever been edited —
+        a five-letter name clipped to make room for a chip about something else.
+        The name gets its own span with the ellipsis on it, and the badge sits
+        outside that span where it can never be the reason a name is cut.
+      */}
+      <Td className="text-ink-muted whitespace-nowrap">
+        <span className="flex items-center gap-1.5">
+          <span className="max-w-[12ch] truncate" title={task.deliveredByName}>
+            {task.deliveredByName}
+          </span>
+          {task.editCount > 0 && (
+            <Pill
+              tone="outline"
+              className="shrink-0"
+              title={
+                task.lastEditedAt
+                  ? `Last edited ${formatTimestamp(task.lastEditedAt)}${task.lastEditedByName ? ` by ${task.lastEditedByName}` : ''}`
+                  : undefined
+              }
+            >
+              {/* Just the count at this size. "edited 3×" repeated down fifty
+                  rows is a sentence where a number would do; the tooltip and the
+                  task record still spell it out. */}
+              {task.editCount}×
+            </Pill>
+          )}
+        </span>
       </Td>
 
       {/*

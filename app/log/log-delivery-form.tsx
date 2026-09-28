@@ -1,7 +1,8 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { Plus } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { BrandInput } from '@/components/brand-input'
 import { Combobox, type ComboboxOption } from '@/components/combobox'
@@ -9,6 +10,7 @@ import { DelivererInput } from '@/components/deliverer-input'
 import type { MultiOption } from '@/components/multi-select'
 import { AsinSection, emptyAsin, type AsinDraft } from '@/components/asin-section'
 import { Band, Field } from '@/components/field'
+import { Segmented } from '@/components/segmented'
 import { Input } from '@/components/ui/input'
 import {
   ApiError,
@@ -22,6 +24,7 @@ import type { Complexity } from '@/lib/api/types'
 import { todayInIST, formatCategory } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { PrimaryButton } from '@/components/primary-button'
+import { isPM, useSession } from '@/components/session'
 
 type FormState = {
   agencyId: string
@@ -36,6 +39,9 @@ type FormState = {
   notes: string
 }
 
+/** A card key that never matches one, so nothing is open. */
+const NONE_OPEN = '__none__'
+
 const EMPTY: FormState = {
   agencyId: '',
   brandName: '',
@@ -46,11 +52,45 @@ const EMPTY: FormState = {
 }
 
 export function LogDeliveryForm() {
+  /**
+   * A PM delivers as themselves (§5.10).
+   *
+   * The picker is hidden rather than pre-filled and locked: a disabled field
+   * carrying your own name is furniture, and this form exists to be finished in
+   * under thirty seconds (§5.1). The server stamps the deliverer from the
+   * session regardless of what is posted, so this is presentation, not the
+   * rule — the rule is in `createTask`.
+   */
+  const { user } = useSession()
+  const deliversAsSelf = isPM(user)
+
   const queryClient = useQueryClient()
   const [form, setForm] = useState<FormState>(EMPTY)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [duplicateAck, setDuplicateAck] = useState(false)
+  /**
+   * Which product card is open. One at a time (§5.1).
+   *
+   * Null means the last one, which is the card you were just given by "Add
+   * another product" — so the form always opens on something you can type into
+   * rather than on a wall of collapsed lines.
+   *
+   * NONE_OPEN is a key no card can hold, which is how Done closes the last card
+   * without immediately reopening it as "the last one".
+   */
+  const [openAsin, setOpenAsin] = useState<string | null>(null)
   const firstFieldRef = useRef<HTMLButtonElement>(null)
+
+  /**
+   * Which side of the toggle the cards are on, read from the cards themselves.
+   *
+   * There is no delivery-level control any more (owner, 2026-09-01) — each card
+   * says what it is, so a submission can carry a hero product and a variation
+   * at once. These only decide the wording around them.
+   */
+  const allParent = form.asins.every((a) => a.forParent)
+  const allVariation = form.asins.every((a) => !a.forParent)
+  const mixedSides = !allParent && !allVariation
 
   const { data: agencies = [] } = useQuery({ queryKey: ['agencies'], queryFn: getAgencies })
   // Active only: a retired service should not be offered for a new delivery.
@@ -159,6 +199,7 @@ export function LogDeliveryForm() {
 
       // Reset, but keep agency and brand: PMs log several for one brand in a
       // row, and retyping them is the main source of friction (§5.1).
+      setOpenAsin(null)
       setForm((f) => ({
         ...EMPTY,
         agencyId: f.agencyId,
@@ -176,7 +217,22 @@ export function LogDeliveryForm() {
       if (error instanceof ApiError && error.issues.length > 0) {
         // The server is authoritative (§4.6), so its field errors win.
         setErrors(Object.fromEntries(error.issues.map((i) => [i.path, i.message])))
-        toast.error('Check the highlighted fields')
+
+        /*
+         * Say what is wrong, not just that something is.
+         *
+         * The server's paths do not always match a field this form renders —
+         * it validates a payload, this renders a screen — and when they do not,
+         * "Check the highlighted fields" points at nothing highlighted. Naming
+         * the first problem means the message is useful even when the field it
+         * belongs to is not on screen.
+         */
+        toast.error(error.issues[0]!.message, {
+          description:
+            error.issues.length > 1
+              ? `and ${error.issues.length - 1} more`
+              : 'Check the highlighted fields.',
+        })
         return
       }
       toast.error(error instanceof Error ? error.message : 'Could not save')
@@ -196,18 +252,22 @@ export function LogDeliveryForm() {
         next[`a${ai}.serviceIds`] = 'Pick at least one service'
       }
       for (const serviceId of asin.serviceIds) {
-        const rows = asin.variationsByService[serviceId] ?? []
-        rows.forEach((v, i) => {
-          if (!v.complexity) next[`a${ai}.${serviceId}.variations.${i}.complexity`] = 'Pick one'
-          const n = Number(v.revisionCount)
-          if (!Number.isInteger(n) || n < 0)
-            next[`a${ai}.${serviceId}.variations.${i}.revisionCount`] = '0 or more'
-        })
+        /*
+         * Nothing to check on a variation row.
+         *
+         * Leaving the tier unset is an answer, not a gap — it means the plain
+         * version of the service (§5.7) — and the product name and child ASIN
+         * are both optional. The revisions check that used to live here went
+         * with the field.
+         */
       }
     })
+    /* A date is required; which date is the PM's to decide (owner, 2026-09-28).
+       The period lock still governs what a date is allowed to reach (§4.5). */
     if (!form.deliveredOn) next.deliveredOn = 'Pick a date'
-    else if (form.deliveredOn > todayInIST()) next.deliveredOn = 'Cannot be in the future'
-    if (!form.deliveredByName.trim()) next.deliveredByName = 'Enter who delivered it'
+    // Not required when the server is going to decide it anyway.
+    if (!deliversAsSelf && !form.deliveredByName.trim())
+      next.deliveredByName = 'Enter who delivered it'
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -226,15 +286,65 @@ export function LogDeliveryForm() {
         productName: asin.productName.trim() || null,
         lines: asin.serviceIds.map((serviceId) => ({
           serviceId,
-          clickupTaskId: asin.clickupByService[serviceId]?.trim() || null,
-          variations: (asin.variationsByService[serviceId] ?? []).map((v) => ({
-            complexity: v.complexity as Complexity,
-            revisionCount: Number(v.revisionCount),
-          })),
+          /*
+           * Whether the first line below is the parent listing.
+           *
+           * The server cannot tell from the rows themselves — "line 1 is the
+           * parent" is a convention, not a fact about the data — and it decides
+           * both the variation count and the variation codes, so the form has
+           * to say (§2.4).
+           */
+          hasParentLine: asin.forParent,
+          /*
+           * One line per service, its variations taken from the card.
+           *
+           * Everything about a SKU — its name, its code, its tier — is answered
+           * once above and repeated onto each service here, because the ledger
+           * stores a variation row per service and that has not changed. What
+           * changed is that the form stopped asking the same question once per
+           * service (owner, 2026-09-01).
+           *
+           * A parent delivery has no SKUs at all: one line, no name, no tier,
+           * which the server records as STANDALONE.
+           */
+          variations: [
+            {
+              // Unset is sent as null, and the server stores it as STANDALONE:
+              // no tier, so the service's base price applies. A parent line is
+              // always standalone (§2.4).
+              complexity: asin.forParent ? null : (asin.complexity || null) as Complexity | null,
+              /*
+               * The card's own name, on the line, when the card IS a variation.
+               * A parent line carries none: its name is the listing's, one
+               * level up (§2.4).
+               *
+               * The code is not repeated here — it is already the task's ASIN,
+               * since on this side of the toggle the card's code IS this
+               * variation's listing.
+               */
+              productName: asin.forParent ? null : asin.productName.trim() || null,
+              asinCode: null,
+              /*
+               * No clickupTaskId and no revisionCount. Both left the form
+               * (§5.1); the server treats them as optional and defaults the
+               * count to 0, so a delivery simply starts with no rounds and
+               * gains them on its own record as they happen.
+               */
+            },
+          ],
         })),
       })),
       deliveredOn: form.deliveredOn,
-      deliveredByName: form.deliveredByName.trim(),
+      /*
+       * Omitted entirely when the PM delivers as themselves.
+       *
+       * It was sent as an empty string, which the server read as "a name was
+       * given, and it is blank" and refused — naming a field the PM's form does
+       * not have, so nothing highlighted and the toast pointed at nothing. The
+       * server stamps the deliverer from the session either way (§5.10); the
+       * client's job is to not claim otherwise.
+       */
+      deliveredByName: deliversAsSelf ? undefined : form.deliveredByName.trim(),
       notes: form.notes.trim() || null,
     })
   }
@@ -306,41 +416,19 @@ export function LogDeliveryForm() {
             />
           )}
         </Field>
+
       </Band>
 
       <Band title="Products" className="py-7">
-        <Field
-          label="Number of ASINs"
-          htmlFor="asinCount"
-          hint="How many product listings this job covered. Each one gets its own services and variations."
-        >
-          <Input
-            id="asinCount"
-            type="number"
-            min={1}
-            max={50}
-            className="w-24"
-            value={form.asins.length}
-            onChange={(e) => {
-              const wanted = Math.max(1, Math.min(50, Number(e.target.value) || 1))
-              setForm((f) => {
-                if (wanted === f.asins.length) return f
-                // Growing adds empty sections; shrinking drops from the end,
-                // so the work already entered in earlier sections survives.
-                const asins =
-                  wanted > f.asins.length
-                    ? [
-                        ...f.asins,
-                        ...Array.from({ length: wanted - f.asins.length }, () => emptyAsin()),
-                      ]
-                    : f.asins.slice(0, wanted)
-                return { ...f, asins }
-              })
-              setErrors({})
-              setDuplicateAck(false)
-            }}
-          />
-        </Field>
+        {/* The lede follows the toggle too: describing children under every card
+            was simply wrong on a delivery that has none. */}
+        <p className="text-ink-muted mb-4 text-micro">
+          {mixedSides
+            ? 'One card per delivered thing — a product listing, or one of its variations. Each card says which.'
+            : allParent
+              ? 'One card per product listing. Every service you pick is delivered against it.'
+              : 'One card per variation — the same product in another size or colour, with its own ASIN. Every service you pick is delivered for it.'}
+        </p>
 
         {/* Cards carry their own padding now, so they need more room between
             them than the fields inside them. */}
@@ -350,13 +438,27 @@ export function LogDeliveryForm() {
               key={asin.key}
               index={index}
               value={asin}
+              /*
+                Open when chosen, when it is the last card and none is chosen,
+                or whenever it has an error — a collapsed card cannot show you
+                what is wrong with it, and a form that refuses to save without
+                saying where is the worst thing this screen could do.
+              */
+              open={
+                (openAsin ?? form.asins[form.asins.length - 1]?.key) === asin.key ||
+                Object.keys(errors).some((k) => k.startsWith(`a${index}.`))
+              }
+              onOpen={() => setOpenAsin(asin.key)}
+              onDone={() => setOpenAsin(NONE_OPEN)}
               services={services}
               serviceOptions={serviceOptions}
               brandId={brandId}
-              allowance={selectedAgency?.freeRevisionAllowance}
               removable={form.asins.length > 1}
               onRemove={() => {
                 setForm((f) => ({ ...f, asins: f.asins.filter((a) => a.key !== asin.key) }))
+                /* Removing the open card falls back to the last one rather than
+                   leaving every card collapsed and nothing to type into. */
+                setOpenAsin((k) => (k === asin.key ? null : k))
                 setErrors({})
                 setDuplicateAck(false)
               }}
@@ -377,8 +479,30 @@ export function LogDeliveryForm() {
           ))}
         </div>
 
+        <button
+          type="button"
+          onClick={() => {
+            setForm((f) => ({
+              ...f,
+              /* A new card starts on the same side as the last one: adding a
+                 second variation should not silently begin as a parent. */
+              asins: [...f.asins, emptyAsin(f.asins[f.asins.length - 1]?.forParent ?? true)],
+            }))
+            /* The new card is the one you are about to fill in. */
+            setOpenAsin(null)
+            setErrors({})
+            setDuplicateAck(false)
+          }}
+          className="text-ink-muted hover:text-ink hover:border-rule-strong border-rule mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed py-3 text-micro transition-colors duration-[120ms]"
+        >
+          <Plus className="size-3.5" />
+          {/* A card is a product on one side of the toggle and a variation on
+              the other, so the button that adds one says which. */}
+          {mixedSides || allParent ? 'Add another product' : 'Add another variation'}
+        </button>
+
         {rowCount > 1 && (
-          <p className="text-ink-muted text-micro">
+          <p className="text-ink-muted mt-3 text-micro">
             Saving creates {rowCount} ledger rows — one per service per ASIN — linked as one
             delivery. That is what keeps the delivered count and the service mix exact.
           </p>
@@ -387,30 +511,45 @@ export function LogDeliveryForm() {
 
       <Band title="When and who" className="py-7">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Delivered on" htmlFor="deliveredOn" error={errors.deliveredOn}>
+          {/*
+            "Created on" (owner, 2026-09-23). The column, the API field and the
+            period it lands in are all still `deliveredOn` — only the label
+            changed, so nothing about when a delivery counts has moved.
+          */}
+          <Field label="Created on" htmlFor="deliveredOn" error={errors.deliveredOn}>
+            {/*
+              No `max` (owner, 2026-09-28). Two reasons, and the second is the
+              bug: a date is now free to pick, AND the cap was frozen at the
+              last deploy. This page is prerendered, so `todayInIST()` ran at
+              build time and shipped as `max="2026-09-23"` in the HTML — React
+              does not patch an attribute mismatch on hydration, so the form
+              refused every date after the day it was built, today included.
+              A cap computed at render is a cap that expires; this one has none.
+            */}
             <Input
               id="deliveredOn"
               type="date"
-              max={todayInIST()}
               value={form.deliveredOn}
               aria-invalid={Boolean(errors.deliveredOn)}
               onChange={(e) => set('deliveredOn', e.target.value)}
             />
           </Field>
 
-          <Field
-            label="Delivered by"
-            htmlFor="deliveredBy"
-            error={errors.deliveredByName}
-            hint="Type a name that is not listed to add them to the team."
-          >
-            <DelivererInput
-              id="deliveredBy"
-              value={form.deliveredByName}
-              invalid={Boolean(errors.deliveredByName)}
-              onChange={(v) => set('deliveredByName', v)}
-            />
-          </Field>
+          {!deliversAsSelf && (
+            <Field
+              label="Delivered by"
+              htmlFor="deliveredBy"
+              error={errors.deliveredByName}
+              hint="Type a name that is not listed to add them to the team."
+            >
+              <DelivererInput
+                id="deliveredBy"
+                value={form.deliveredByName}
+                invalid={Boolean(errors.deliveredByName)}
+                onChange={(v) => set('deliveredByName', v)}
+              />
+            </Field>
+          )}
         </div>
 
         <Field label="Notes" htmlFor="notes" optional>
@@ -457,7 +596,7 @@ export function LogDeliveryForm() {
             pending={mutation.isPending}
             pendingLabel="Saving"
           >
-            {duplicateAck ? 'Save anyway' : 'Save delivery'}
+            {duplicateAck ? 'Save anyway' : 'Save task'}
           </PrimaryButton>
 
           <p className="text-ink-faint text-micro">

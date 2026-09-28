@@ -26,6 +26,10 @@ export function AsinInput({
   onPick,
   id,
   invalid,
+  placeholder,
+  className,
+  'aria-label': ariaLabel,
+  hint = true,
 }: {
   /** Null while the brand is new or still being typed — then there is nothing to suggest. */
   brandId: string | null
@@ -39,6 +43,15 @@ export function AsinInput({
   onPick?: (asin: { code: string; productName: string | null }) => void
   id?: string
   invalid?: boolean
+  placeholder?: string
+  className?: string
+  'aria-label'?: string
+  /**
+   * Whether to show the "new ASIN" note under the field. Off for the child
+   * fields inside the services table, where a note under every row would make
+   * the table jump a line taller as each code is typed.
+   */
+  hint?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [highlight, setHighlight] = useState(-1)
@@ -84,7 +97,8 @@ export function AsinInput({
         value={value}
         aria-invalid={invalid}
         autoComplete="off"
-        placeholder={known.length > 0 ? 'Pick or type a code' : 'B0…'}
+        placeholder={placeholder ?? (known.length > 0 ? 'Pick or type a code' : 'B0…')}
+        aria-label={ariaLabel}
         // Uppercased on the way in, matching how Amazon prints them and how
         // they are deduped when saved.
         onChange={(e) => {
@@ -108,17 +122,17 @@ export function AsinInput({
             setOpen(false)
           }
         }}
-        className="code"
+        className={cn('code', className)}
       />
 
-      {isNew && known.length > 0 && !showList && (
+      {hint && isNew && known.length > 0 && !showList && (
         <p className="text-ink-muted mt-1.5 text-micro">
           New ASIN for this brand. It will be created when you save.
         </p>
       )}
 
       {showList && (
-        <ul className="bg-surface border-control absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border p-1 shadow-[0_8px_24px_-8px_oklch(0.22_0.012_60_/_18%)]">
+        <ul className="glass bg-surface border-control absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border p-1 shadow-[0_8px_24px_-8px_oklch(0.22_0.012_60_/_18%)]">
           {suggestions.map((a, i) => (
             <li key={a.id}>
               <button
