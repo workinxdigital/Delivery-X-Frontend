@@ -5,15 +5,27 @@ import { Logo } from '@/components/logo'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { NotificationCentre } from '@/components/notification-centre'
-import { isAdmin, useSession } from '@/components/session'
+import { homeFor, isAdmin, isClient, useSession } from '@/components/session'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { logoutRequest } from '@/lib/api/client'
 import { cn } from '@/lib/utils'
 
-const LINKS = [
+const STAFF_LINKS = [
   { href: '/log', label: 'Log a delivery' },
   { href: '/ledger', label: 'Ledger' },
   { href: '/admin', label: 'Admin', adminOnly: true },
+]
+
+/**
+ * A client's nav is its own, not the staff one with things removed (§6.4).
+ *
+ * Sharing the list and hiding items would leave a client one CSS mistake away
+ * from seeing a link to the logging form — and a link they cannot use is worse
+ * than no link, because it implies the screen is theirs.
+ */
+const CLIENT_LINKS = [
+  { href: '/client', label: 'Overview' },
+  { href: '/client/projects', label: 'Projects' },
 ]
 
 export function Nav() {
@@ -35,7 +47,11 @@ export function Nav() {
   // The login screen has no navigation to offer.
   if (pathname === '/login') return null
 
-  const links = LINKS.filter((l) => !l.adminOnly || isAdmin(user))
+  const client = isClient(user)
+  const links = client
+    ? CLIENT_LINKS
+    : STAFF_LINKS.filter((l) => !l.adminOnly || isAdmin(user))
+  const home = homeFor(user)
 
   return (
     /*
@@ -52,14 +68,14 @@ export function Nav() {
           supplies that variant for.
         */}
         <div className="flex items-center gap-4 py-3">
-          <Link href="/log" className="flex items-center" aria-label="DeliverX home">
+          <Link href={home} className="flex items-center" aria-label="DeliverX home">
             {/* 120px wide is the brand's stated minimum for legibility. */}
             <Logo priority className="w-[120px]" />
           </Link>
 
           <span aria-hidden className="bg-rule h-6 w-px" />
 
-          <Link href="/log" className="display text-[0.9375rem] font-semibold">
+          <Link href={home} className="display text-[0.9375rem] font-semibold">
             DeliverX
           </Link>
         </div>

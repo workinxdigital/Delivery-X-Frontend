@@ -20,3 +20,6 @@ npm-debug.log*
 .idea/
 .vercel
 .env*
+
+# Local staging overrides, never committed
+.env.development.local

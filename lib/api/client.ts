@@ -525,3 +525,115 @@ export const updateUser = (
     method: 'PATCH',
     body: JSON.stringify(payload),
   })
+
+// ---------------------------------------------------------------- client panel
+
+/**
+ * The client-facing reads (§6.4).
+ *
+ * `canSeeMoney` is a discriminant, not a styling hint: when it is false the
+ * money fields are ABSENT from the response rather than zeroed, because the
+ * server never fetched them. The types below say so, which keeps a component
+ * from rendering `amountMinor ?? 0` and quietly inventing a figure.
+ */
+export type ClientLedgerEntry = {
+  id: string
+  kind: 'DEPOSIT_CREDIT' | 'ADJUSTMENT' | 'PROJECT_CHARGE' | 'ROUND_CHARGE' | 'REVERSAL'
+  amountMinor: number
+  occurredOn: string
+  description: string
+  disputed: boolean
+  disputeNote: string | null
+  brandName: string | null
+  taskCode: string | null
+}
+
+export type ClientCounts = {
+  projects: number
+  variations: number
+  revisionRounds: number
+  paidRounds: number
+}
+
+export type ClientRecent = {
+  id: string
+  taskCode: string
+  brandName: string
+  serviceName: string
+  variations: number
+  rounds: number
+  deliveredOn: string
+}
+
+export type ClientBalance = {
+  creditedMinor: number
+  consumedMinor: number
+  consumedProjectsMinor: number
+  consumedRoundsMinor: number
+  availableMinor: number
+  entries: number
+  headline: { label: string; amountMinor: number; direction: 'DOWN' | 'UP' }
+  utilisation: number | null
+}
+
+export type ClientDashboard = {
+  account: { name: string; billingMode: 'DEPOSIT' | 'POSTPAID'; includedRounds: number }
+  counts: ClientCounts
+  recent: ClientRecent[]
+} & (
+  | { canSeeMoney: false }
+  | { canSeeMoney: true; balance: ClientBalance; entries: ClientLedgerEntry[] }
+)
+
+export type ClientProject = {
+  id: string
+  taskCode: string
+  brandName: string
+  brandId: string
+  serviceName: string
+  asinCode: string | null
+  productName: string | null
+  tiers: string[]
+  variations: number
+  rounds: number
+  includedRounds: number
+  paidRounds: number
+  deliveredOn: string
+  amountMinor?: number
+}
+
+export const getClientDashboard = () => apiFetch<ClientDashboard>('/client/dashboard')
+
+export const getClientProjects = (params: { brandId?: string; serviceId?: string } = {}) =>
+  apiFetch<{ canSeeMoney: boolean; projects: ClientProject[] }>(`/client/projects${qs(params)}`)
+
+export type ClientProjectDetail = {
+  canSeeMoney: boolean
+  project: {
+    id: string
+    taskCode: string
+    brandName: string
+    serviceName: string
+    asinCode: string | null
+    productName: string | null
+    deliveredOn: string
+    includedRounds: number
+    hasParentLine: boolean
+    variations: {
+      variationNumber: number
+      productName: string | null
+      complexity: string | null
+      rounds: { roundNumber: number; requestedOn: string; completedOn: string | null; included: boolean }[]
+    }[]
+    charges?: ClientLedgerEntry[]
+  }
+}
+
+export const getClientProject = (id: string) =>
+  apiFetch<ClientProjectDetail>(`/client/projects/${id}`)
+
+export const flagCharge = (id: string, note: string | null) =>
+  apiFetch<{ entry: { id: string; disputedAt: string } }>(`/client/charges/${id}/flag`, {
+    method: 'POST',
+    body: JSON.stringify({ note }),
+  })

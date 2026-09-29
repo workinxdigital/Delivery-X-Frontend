@@ -303,7 +303,8 @@ export type HistoryEntry = {
  * OWNER and VIEWER were removed: the owner is an admin, and a read-only account
  * nobody had asked for was one more role to keep every gate in step with.
  */
-export type Role = 'ADMIN' | 'PM'
+/** Three roles since 2026-09-29: the client panel added a read-only outsider. */
+export type Role = 'ADMIN' | 'PM' | 'CLIENT'
 
 export type SessionUser = { id: string; name: string; email: string; role: Role }
 

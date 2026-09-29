@@ -36,6 +36,18 @@ export const isAdmin = (user: SessionUser | null) => user?.role === 'ADMIN'
 export const isPM = (user: SessionUser | null) => user?.role === 'PM'
 
 /**
+ * A client of the agency, reading their own account (§6).
+ *
+ * Staff and clients share a sign-in and share nothing else: a client has no
+ * ledger, no logging form and no admin, and the API refuses all three whatever
+ * the browser renders.
+ */
+export const isClient = (user: SessionUser | null) => user?.role === 'CLIENT'
+
+/** Where this person's session belongs once they are signed in. */
+export const homeFor = (user: SessionUser | null) => (isClient(user) ? '/client' : '/log')
+
+/**
  * Session state, and the redirect to /login when there is none.
  *
  * The gate here is a convenience, not the security boundary: the API rejects
@@ -63,7 +75,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (unauthenticated && pathname !== '/login') {
       router.replace(`/login?next=${encodeURIComponent(pathname)}`)
     }
-    if (user && pathname === '/login') router.replace('/log')
+    if (user && pathname === '/login') router.replace(homeFor(user))
   }, [isLoading, unauthenticated, user, pathname, router])
 
   /**

@@ -9,6 +9,7 @@ import { Field } from '@/components/field'
 import { PrimaryButton } from '@/components/primary-button'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
+import { homeFor, isClient } from '@/components/session'
 import { ApiError, loginRequest } from '@/lib/api/client'
 
 /**
@@ -50,8 +51,19 @@ export function LoginForm() {
       // Seed the cache so the next screen does not flicker through its
       // unauthenticated state before the session query resolves.
       queryClient.setQueryData(['me'], user)
+      /*
+       * Where you land depends on who you are (§6.4).
+       *
+       * A `next` from the URL is only honoured when it belongs to this role: a
+       * client bounced to /login from a stale /ledger link would otherwise be
+       * sent straight back to a screen the API refuses them, and the redirect
+       * loop reads as a broken sign-in rather than a screen that is not theirs.
+       */
+      const home = homeFor(user)
       const next = params.get('next')
-      router.replace(next && next.startsWith('/') ? next : '/log')
+      const allowed =
+        next && next.startsWith('/') && (isClient(user) ? next.startsWith('/client') : !next.startsWith('/client'))
+      router.replace(allowed ? next : home)
     },
     onError: (e) => {
       setError(
