@@ -619,9 +619,12 @@ export type ClientProjectDetail = {
     asinCode: string | null
     productName: string | null
     deliveredOn: string
+    /** When it was entered, as distinct from the day it shipped (§4.3). */
+    loggedOn: string
     includedRounds: number
+    variations: number
     hasParentLine: boolean
-    variations: {
+    lines: {
       variationNumber: number
       productName: string | null
       complexity: string | null

@@ -58,6 +58,43 @@ export function ClientProjectScreen({ id }: { id: string }) {
 
   const p = data.project
 
+  /* Flattened across variations and ordered by date, because a client reads the
+     job as one story rather than as a set of parallel ones. */
+  const allRounds = p.lines
+    .flatMap((v) =>
+      v.rounds.map((r) => ({
+        ...r,
+        variationNumber: v.variationNumber,
+        product: p.lines.length > 1 ? v.productName : null,
+      })),
+    )
+    .sort((a, b) => a.requestedOn.localeCompare(b.requestedOn))
+  const rounds = allRounds.length
+  const paid = allRounds.filter((r) => !r.included).length
+
+  /*
+   * Every event, in date order.
+   *
+   * Sorted rather than assembled in a fixed sequence, because a delivery can be
+   * entered after the day it shipped — backdating is allowed (§5.1) — and a
+   * timeline that always printed "logged" first would show a job recorded on
+   * the 29th above one delivered on the 20th and call it a sequence.
+   *
+   * "Recorded", not "logged by your project manager": on a backdated entry the
+   * first phrase is true and the second implies the work started then.
+   */
+  const events = [
+    { key: 'logged', date: p.loggedOn, label: 'Recorded' as const, badge: undefined, emphasis: false },
+    ...allRounds.map((r) => ({
+      key: `r-${r.variationNumber}-${r.roundNumber}`,
+      date: r.requestedOn,
+      label: `Revision round ${r.roundNumber}${r.product ? ` · ${r.product}` : ''}`,
+      badge: (r.included ? 'included' : 'charged') as 'included' | 'charged',
+      emphasis: false,
+    })),
+    { key: 'delivered', date: p.deliveredOn, label: 'Delivered' as const, badge: undefined, emphasis: true },
+  ].sort((a, b) => a.date.localeCompare(b.date) || (a.key === 'delivered' ? 1 : -1))
+
   return (
     <div className="space-y-8">
       <header>
@@ -70,7 +107,7 @@ export function ClientProjectScreen({ id }: { id: string }) {
         </div>
         <p className="text-ink-muted mt-1 text-dense">
           {p.brandName}
-          {p.productName ? ` · ${p.productName}` : ''} · delivered {formatDateOnly(p.deliveredOn)}
+          {p.productName ? ` · ${p.productName}` : ''}
         </p>
         {p.asinCode && (
           <p className="mt-2">
@@ -79,10 +116,54 @@ export function ClientProjectScreen({ id }: { id: string }) {
         )}
       </header>
 
+      {/*
+        The facts of the job, on one hairline band rather than in boxes.
+        A project with no revisions has nothing else to say about itself, and
+        without these the page was a heading and a charge (owner, 2026-09-29).
+      */}
+      <section className="border-rule divide-rule flex flex-wrap divide-x border-y py-4">
+        <Fact label="Delivered" value={formatDateOnly(p.deliveredOn)} />
+        <Fact label="Service" value={p.serviceName} />
+        <Fact
+          label="Variations"
+          value={p.variations === 0 ? 'Main product only' : String(p.variations)}
+        />
+        <Fact
+          label="Revisions"
+          value={
+            rounds === 0
+              ? `None used of ${p.includedRounds}`
+              : `${rounds} of ${p.includedRounds} included${paid > 0 ? ` · ${paid} charged` : ''}`
+          }
+          tone={paid > 0 ? 'beyond' : undefined}
+        />
+      </section>
+
+      {/*
+        The timeline §4.3 asks for. Logged and delivered always exist, so this
+        is never empty — which is the difference between "nothing happened" and
+        "nothing was recorded".
+      */}
       <section>
+        <h2 className="display mb-3 text-[1.0625rem] font-semibold">What happened</h2>
+        <ol className="border-rule bg-surface divide-rule shadow-card divide-y overflow-hidden rounded-xl border">
+          {events.map((e) => (
+            <Event key={e.key} date={e.date} label={e.label} badge={e.badge} emphasis={e.emphasis} />
+          ))}
+        </ol>
+      </section>
+
+      <section>
+        {/*
+          What, not when. The rounds used to be listed again under each product
+          and the timeline above already tells that story in date order — so the
+          same five rounds appeared twice on one page. This section answers
+          "which products, at what complexity"; the timeline answers "and then
+          what happened".
+        */}
         <h2 className="display mb-3 text-[1.0625rem] font-semibold">What was delivered</h2>
         <div className="border-rule bg-surface divide-rule shadow-card divide-y overflow-hidden rounded-xl border">
-          {p.variations.map((v, i) => {
+          {p.lines.map((v, i) => {
             const label = p.hasParentLine && i === 0 ? 'Main product' : `Variation ${p.hasParentLine ? i : i + 1}`
             return (
               <div key={v.variationNumber} className="p-5">
@@ -94,20 +175,6 @@ export function ClientProjectScreen({ id }: { id: string }) {
                   </span>
                 </div>
 
-                {v.rounds.length > 0 && (
-                  <ol className="mt-3 space-y-1.5">
-                    {v.rounds.map((r) => (
-                      <li key={r.roundNumber} className="flex flex-wrap items-center gap-2 text-dense">
-                        <span className="text-ink-muted w-16 text-micro">Round {r.roundNumber}</span>
-                        <span className="text-ink-muted">{formatDateOnly(r.requestedOn)}</span>
-                        {/* The client's contract vocabulary, not ours. */}
-                        {r.included
-                          ? <Pill tone="outline">included</Pill>
-                          : <Pill tone="beyond">charged</Pill>}
-                      </li>
-                    ))}
-                  </ol>
-                )}
               </div>
             )
           })}
@@ -193,5 +260,41 @@ export function ClientProjectScreen({ id }: { id: string }) {
         </section>
       )}
     </div>
+  )
+}
+
+function Fact({ label, value, tone }: { label: string; value: string; tone?: 'beyond' }) {
+  return (
+    <div className="grow px-5 first:pl-0">
+      <dt className="text-ink-muted text-micro uppercase tracking-wide">{label}</dt>
+      <dd className={cn('mt-0.5 font-medium', tone === 'beyond' && 'text-beyond')}>{value}</dd>
+    </div>
+  )
+}
+
+/**
+ * One event on the job's timeline.
+ *
+ * The date leads, because the question a client opens this to answer is "when
+ * did that happen" far more often than "what was it called".
+ */
+function Event({
+  date,
+  label,
+  badge,
+  emphasis,
+}: {
+  date: string
+  label: string
+  badge?: 'included' | 'charged'
+  /** The delivery itself, which is the event the whole record is about. */
+  emphasis?: boolean
+}) {
+  return (
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3">
+      <span className="text-ink-muted w-28 shrink-0 text-micro tabular">{formatDateOnly(date)}</span>
+      <span className={cn('min-w-0 grow', emphasis && 'font-medium')}>{label}</span>
+      {badge && (badge === 'included' ? <Pill tone="outline">included</Pill> : <Pill tone="beyond">charged</Pill>)}
+    </li>
   )
 }
