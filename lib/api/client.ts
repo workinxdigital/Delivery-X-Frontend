@@ -272,6 +272,39 @@ export const getMe = () => apiFetch<{ user: SessionUser }>('/auth/me').then((r) 
 
 // ---------------------------------------------------------------- admin
 
+/**
+ * Brands for one agency, and merging two of them (§2.2).
+ *
+ * The API routes are the ones the removed Brands tab used to call (§5.5). Only
+ * the merge is reached from the UI today, because merging is the one thing
+ * editing a delivery cannot do.
+ */
+export type AdminBrand = {
+  id: string
+  name: string
+  agencyId: string
+  agencyName: string
+  taskCount: number
+  asinCount: number
+}
+
+export const getAdminBrands = (agencyId: string) =>
+  apiFetch<{ brands: AdminBrand[] }>(`/admin/brands?agencyId=${encodeURIComponent(agencyId)}`).then(
+    (r) => r.brands,
+  )
+
+export const mergeBrand = (sourceId: string, intoId: string) =>
+  apiFetch<{
+    source: { id: string; name: string }
+    target: { id: string; name: string }
+    deliveriesMoved: number
+    asinsMoved: number
+    asinsFolded: number
+  }>(`/admin/brands/${sourceId}/merge`, {
+    method: 'POST',
+    body: JSON.stringify({ intoId }),
+  })
+
 export const getAdminAgencies = () =>
   apiFetch<{ agencies: AdminAgency[] }>('/admin/agencies').then((r) => r.agencies)
 

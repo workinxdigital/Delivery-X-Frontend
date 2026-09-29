@@ -17,6 +17,7 @@ import {
   updateAgency,
 } from '@/lib/api/client'
 import type { AdminAgency } from '@/lib/api/types'
+import { AgencyBrands } from './agency-brands'
 import { AgencyRates } from './agency-rates'
 import { GhostButton, PanelHeader, PrimaryButton, Td, Th } from './panel-parts'
 
@@ -58,6 +59,8 @@ export function AgenciesPanel() {
    * admin who has just typed a partner's name is exactly the person who knows
    * what that partner pays.
    */
+  /** Whose brands are open, for a merge (§2.2). */
+  const [brandsFor, setBrandsFor] = useState<{ id: string; name: string } | null>(null)
   const [ratesFor, setRatesFor] = useState<{ id: string; name: string; fresh: boolean } | null>(
     null,
   )
@@ -245,6 +248,25 @@ export function AgenciesPanel() {
         </section>
       )}
 
+      {brandsFor && (
+        <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+            <div>
+              <h3 className="text-dense font-medium">{brandsFor.name} brands</h3>
+              <p className="text-ink-muted mt-0.5 text-micro">
+                Brands are created by typing one on the logging form, so a misspelling becomes
+                its own brand and splits that client&rsquo;s history in two. Merging folds one
+                into another, moves its deliveries across, and makes the old spelling resolve to
+                the survivor from then on.
+              </p>
+            </div>
+            <GhostButton onClick={() => setBrandsFor(null)}>Close</GhostButton>
+          </div>
+
+          <AgencyBrands agencyId={brandsFor.id} agencyName={brandsFor.name} />
+        </section>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-dense">
           <thead>
@@ -331,6 +353,17 @@ export function AgenciesPanel() {
                 </Td>
                 <Td align="right" control>
                   {/* Rates stay reachable after the agency was added. */}
+                  {confirming !== a.id && (
+                    <GhostButton
+                      onClick={() =>
+                        setBrandsFor(brandsFor?.id === a.id ? null : { id: a.id, name: a.name })
+                      }
+                      title={`Merge a misspelled brand for ${a.name}`}
+                    >
+                      Brands
+                    </GhostButton>
+                  )}
+
                   {confirming !== a.id && (
                     <GhostButton
                       onClick={() =>
