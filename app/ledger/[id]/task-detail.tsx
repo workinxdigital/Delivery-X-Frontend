@@ -164,8 +164,18 @@ export function TaskDetailView({ id }: { id: string }) {
 
       {locked && (
         <p className="text-ink-muted mt-3 text-micro">
-          This task is in a locked period, so it cannot be edited. Log a correction in
-          the current open period noting this task code.
+          This task is in a closed month, so it cannot be edited. Log a correction in
+          the current open month noting this task code.{' '}
+          {/*
+            Rework is the exception, and saying so here matters: the banner used
+            to read as "nothing about this job can change", which is exactly the
+            belief that would send somebody off to log a duplicate delivery for
+            a revision (owner, 2026-09-29).
+          */}
+          <span className="text-ink-muted">
+            Revision rounds can still be added — a round is dated in its own right, so
+            rework on an old job belongs to the month it was asked for.
+          </span>
         </p>
       )}
 
@@ -304,7 +314,6 @@ export function TaskDetailView({ id }: { id: string }) {
               variation={variation}
               allowance={task.freeRevisionAllowanceSnapshot}
               hasParentLine={task.hasParentLine ?? true}
-              locked={locked}
             />
           ))}
         </div>
@@ -654,14 +663,12 @@ function VariationBlock({
   variation,
   allowance,
   hasParentLine,
-  locked,
 }: {
   taskId: string
   variation: TaskVariationDetail
   allowance: number
   /** Whether this delivery's first row is the parent listing (§2.4). */
   hasParentLine: boolean
-  locked: boolean
 }) {
   const queryClient = useQueryClient()
   const [adding, setAdding] = useState(false)
@@ -758,7 +765,14 @@ function VariationBlock({
           )}
         </div>
 
-        {!locked && !adding && (
+        {/*
+          Not gated on the period lock any more (owner, 2026-09-29). Rework
+          arrives on old jobs, and a round carries its own date — so adding one
+          to a closed month's delivery is not touching that month. The server
+          checks the ROUND's month instead, and refuses a date inside a closed
+          one.
+        */}
+        {!adding && (
           <button
             type="button"
             onClick={() => setAdding(true)}
@@ -771,12 +785,6 @@ function VariationBlock({
 
       {variation.revisionRounds.length > 0 && (
         <RoundStrip rounds={variation.revisionRounds} />
-      )}
-
-      {locked && (
-        <p className="text-ink-muted mt-2 text-micro">
-          This task is in a locked period, so no rounds can be added.
-        </p>
       )}
 
       {adding && (

@@ -425,6 +425,16 @@ export type PricingLine = {
 
 /** A delivery from the ledger, priced. Identity columns, then money. */
 export type PricedDelivery = {
+  /**
+   * Work delivered in this range, or rework charged in it (owner, 2026-09-29).
+   *
+   * A REWORK row is a job that shipped in an earlier month and was revised in
+   * this one. Only the round charge appears — the delivery itself was invoiced
+   * when it shipped and is never billed twice — so `variationsMinor` is 0 and
+   * `deliveredOn` is the ORIGINAL delivery date, which is what identifies the
+   * job being reworked.
+   */
+  kind?: 'DELIVERY' | 'REWORK'
   taskId: string
   taskCode: string
   /** Whether the first line is the parent listing (§2.4). */

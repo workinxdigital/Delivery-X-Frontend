@@ -614,6 +614,18 @@ function PricedLedger({
                     >
                       {r.taskCode}
                     </Link>
+                    {/*
+                      A rework row is a job that shipped earlier and was revised
+                      in this range (§5.7). Said on the row rather than left to
+                      be inferred from a zero in the variations column: the
+                      reader's question is "why is this September job on my
+                      October bill", and the answer belongs beside its code.
+                    */}
+                    {r.kind === 'REWORK' && (
+                      <Pill tone="outline" className="ml-1.5" title="Revision rounds only. The delivery itself was billed in the month it shipped.">
+                        rework
+                      </Pill>
+                    )}
                   </Td>
                   <Td className="text-ink-muted whitespace-nowrap">
                     {formatDateOnly(r.deliveredOn)}
