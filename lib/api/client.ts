@@ -286,6 +286,8 @@ export type AdminBrand = {
   agencyName: string
   taskCount: number
   asinCount: number
+  /** Whether this brand's client contacts may see money (§6.2). */
+  showsCommercials: boolean
 }
 
 export const getAdminBrands = (agencyId: string) =>
@@ -636,4 +638,99 @@ export const flagCharge = (id: string, note: string | null) =>
   apiFetch<{ entry: { id: string; disputedAt: string } }>(`/client/charges/${id}/flag`, {
     method: 'POST',
     body: JSON.stringify({ note }),
+  })
+
+// ------------------------------------------------- admin: clients and money
+
+export type AdminClientUser = {
+  id: string
+  name: string
+  email: string
+  active: boolean
+  lockedUntil: string | null
+  lastSeenAt: string | null
+  brands: { id: string; name: string }[]
+  scope: 'ACCOUNT' | 'BRANDS'
+}
+
+export const getClientUsers = (agencyId: string) =>
+  apiFetch<{ users: AdminClientUser[] }>(`/admin/agencies/${agencyId}/client-users`).then((r) => r.users)
+
+export const createClientUser = (
+  agencyId: string,
+  payload: { name: string; email: string; password: string; brandIds?: string[] },
+) =>
+  apiFetch<{ user: { id: string; name: string; email: string } }>(
+    `/admin/agencies/${agencyId}/client-users`,
+    { method: 'POST', body: JSON.stringify(payload) },
+  )
+
+export const revokeClientUser = (id: string) =>
+  apiFetch<{ revoked: boolean }>(`/admin/client-users/${id}`, { method: 'DELETE' })
+
+export const setBrandCommercials = (brandId: string, showsCommercials: boolean) =>
+  apiFetch<{ brand: { id: string; showsCommercials: boolean } }>(
+    `/admin/brands/${brandId}/commercials`,
+    { method: 'PATCH', body: JSON.stringify({ showsCommercials }) },
+  )
+
+export const setBillingMode = (agencyId: string, billingMode: 'DEPOSIT' | 'POSTPAID') =>
+  apiFetch<{ agency: { id: string; billingMode: string } }>(
+    `/admin/agencies/${agencyId}/billing-mode`,
+    { method: 'PATCH', body: JSON.stringify({ billingMode }) },
+  )
+
+export type AdminLedgerEntry = ClientLedgerEntry
+export type AdminLedger = {
+  balance: {
+    creditedMinor: number
+    consumedMinor: number
+    consumedProjectsMinor: number
+    consumedRoundsMinor: number
+    availableMinor: number
+    entries: number
+  }
+  entries: AdminLedgerEntry[]
+}
+
+export const getAgencyLedger = (agencyId: string) =>
+  apiFetch<AdminLedger>(`/admin/agencies/${agencyId}/ledger`)
+
+export const postLedgerEntry = (
+  agencyId: string,
+  payload: {
+    kind: 'DEPOSIT_CREDIT' | 'ADJUSTMENT'
+    amountMinor: number
+    occurredOn: string
+    description: string
+    reason?: string
+    brandId?: string
+  },
+) =>
+  apiFetch<{ entry: { id: string } }>(`/admin/agencies/${agencyId}/ledger`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+
+export type AdminDispute = {
+  id: string
+  kind: string
+  amountMinor: number
+  occurredOn: string
+  description: string
+  disputedAt: string
+  disputeNote: string | null
+  agency: { id: string; name: string }
+  brand: { name: string } | null
+  task: { id: string; taskCode: string } | null
+  disputedBy: { name: string; email: string } | null
+}
+
+export const getDisputes = () =>
+  apiFetch<{ disputes: AdminDispute[] }>('/admin/disputes').then((r) => r.disputes)
+
+export const resolveDispute = (id: string, action: 'DISMISS' | 'CREDIT', reason: string) =>
+  apiFetch<{ action: string; creditEntryId: string | null }>(`/admin/disputes/${id}/resolve`, {
+    method: 'POST',
+    body: JSON.stringify({ action, reason }),
   })

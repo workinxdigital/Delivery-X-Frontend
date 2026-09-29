@@ -14,10 +14,13 @@ import {
   createAgency,
   deleteAgency,
   getAdminAgencies,
+  setBillingMode,
   updateAgency,
 } from '@/lib/api/client'
 import type { AdminAgency } from '@/lib/api/types'
 import { AgencyBrands } from './agency-brands'
+import { AgencyClients } from './agency-clients'
+import { AgencyLedger } from './agency-ledger'
 import { AgencyRates } from './agency-rates'
 import { GhostButton, PanelHeader, PrimaryButton, Td, Th } from './panel-parts'
 
@@ -61,6 +64,10 @@ export function AgenciesPanel() {
    */
   /** Whose brands are open, for a merge (§2.2). */
   const [brandsFor, setBrandsFor] = useState<{ id: string; name: string } | null>(null)
+  /** Whose client logins are open (§6.5). */
+  const [clientsFor, setClientsFor] = useState<{ id: string; name: string } | null>(null)
+  /** Whose money is open (§6.3). */
+  const [ledgerFor, setLedgerFor] = useState<{ id: string; name: string; mode: 'DEPOSIT' | 'POSTPAID' } | null>(null)
   const [ratesFor, setRatesFor] = useState<{ id: string; name: string; fresh: boolean } | null>(
     null,
   )
@@ -123,6 +130,32 @@ export function AgenciesPanel() {
       refresh()
     },
     onError,
+  })
+
+  /**
+   * Deposit or post-paid (§6.3.0).
+   *
+   * One ledger either way, so this is a label on the same entries rather than a
+   * migration: a deposit account is a post-paid account that has credits on it.
+   * Switching a client between them keeps every entry they already had.
+   */
+  const billing = useMutation({
+    mutationFn: ({ id, mode }: { id: string; mode: 'DEPOSIT' | 'POSTPAID' }) => setBillingMode(id, mode),
+    onSuccess: (r) => {
+      toast(
+        r.agency.billingMode === 'DEPOSIT'
+          ? 'Now a deposit account'
+          : 'Now billed in arrears',
+        {
+          description:
+            r.agency.billingMode === 'DEPOSIT'
+              ? 'Their balance counts down from what they have paid in.'
+              : 'Their balance counts up toward an invoice. Existing entries are untouched.',
+        },
+      )
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'agencies'] })
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'That did not work'),
   })
 
   const pending = agencies.find((a) => a.id === confirming)
@@ -267,6 +300,43 @@ export function AgenciesPanel() {
         </section>
       )}
 
+      {clientsFor && (
+        <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+            <div>
+              <h3 className="text-dense font-medium">{clientsFor.name} client logins</h3>
+              <p className="text-ink-muted mt-0.5 text-micro">
+                Who on the client&rsquo;s side can sign in and read their own account. They see
+                delivered work, revision rounds and&nbsp;— for brands you have switched money on
+                for&nbsp;— what it cost. They can never see another account, another brand, or
+                anything internal.
+              </p>
+            </div>
+            <GhostButton onClick={() => setClientsFor(null)}>Close</GhostButton>
+          </div>
+
+          <AgencyClients agencyId={clientsFor.id} agencyName={clientsFor.name} />
+        </section>
+      )}
+
+      {ledgerFor && (
+        <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+            <div>
+              <h3 className="text-dense font-medium">{ledgerFor.name} money</h3>
+              <p className="text-ink-muted mt-0.5 text-micro">
+                Charges are written when a delivery or a revision round is logged, never typed
+                here. Only deposits and adjustments are posted by hand, and both appear on the
+                client&rsquo;s statement straight away.
+              </p>
+            </div>
+            <GhostButton onClick={() => setLedgerFor(null)}>Close</GhostButton>
+          </div>
+
+          <AgencyLedger agencyId={ledgerFor.id} agencyName={ledgerFor.name} billingMode={ledgerFor.mode} />
+        </section>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-dense">
           <thead>
@@ -274,6 +344,7 @@ export function AgenciesPanel() {
               <Th>Name</Th>
               <Th>Kind</Th>
               <Th>Free revisions</Th>
+              <Th>Billing</Th>
               <Th>Status</Th>
               <Th>Deliveries</Th>
               <Th />
@@ -282,7 +353,7 @@ export function AgenciesPanel() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={7} className="text-ink-muted py-8 text-center text-micro">
+                <td colSpan={8} className="text-ink-muted py-8 text-center text-micro">
                   Loading
                 </td>
               </tr>
@@ -332,6 +403,26 @@ export function AgenciesPanel() {
                   )}
                 </Td>
                 <Td control>
+                  {/* Two words, one click. The consequence is a label on the
+                      same ledger, so it needs no dialog. */}
+                  <GhostButton
+                    onClick={() =>
+                      billing.mutate({
+                        id: a.id,
+                        mode: (a.billingMode ?? 'POSTPAID') === 'DEPOSIT' ? 'POSTPAID' : 'DEPOSIT',
+                      })
+                    }
+                    title={
+                      (a.billingMode ?? 'POSTPAID') === 'DEPOSIT'
+                        ? 'They prepay and draw down. Click to bill in arrears instead.'
+                        : 'They are billed in arrears. Click to make this a deposit account.'
+                    }
+                  >
+                    {(a.billingMode ?? 'POSTPAID') === 'DEPOSIT' ? 'Deposit' : 'In arrears'}
+                  </GhostButton>
+                </Td>
+
+                <Td control>
                   <GhostButton
                     onClick={() =>
                       save.mutate({
@@ -361,6 +452,32 @@ export function AgenciesPanel() {
                       title={`Merge a misspelled brand for ${a.name}`}
                     >
                       Brands
+                    </GhostButton>
+                  )}
+
+                  {confirming !== a.id && (
+                    <GhostButton
+                      onClick={() =>
+                        setClientsFor(clientsFor?.id === a.id ? null : { id: a.id, name: a.name })
+                      }
+                      title={`Who at ${a.name} can sign in`}
+                    >
+                      Clients
+                    </GhostButton>
+                  )}
+
+                  {confirming !== a.id && (
+                    <GhostButton
+                      onClick={() =>
+                        setLedgerFor(
+                          ledgerFor?.id === a.id
+                            ? null
+                            : { id: a.id, name: a.name, mode: a.billingMode ?? 'POSTPAID' },
+                        )
+                      }
+                      title={`Deposits, adjustments and what ${a.name} has consumed`}
+                    >
+                      Money
                     </GhostButton>
                   )}
 

@@ -12,6 +12,14 @@ export type Agency = {
   name: string
   type: 'AGENCY' | 'DIRECT'
   freeRevisionAllowance: number
+  /**
+   * Whether this account prepays or is billed in arrears (§6.3.0).
+   *
+   * Optional because the field arrived with the client panel: an API that has
+   * not been redeployed still answers without it, and a missing value should
+   * render as the default rather than as a crash.
+   */
+  billingMode?: 'DEPOSIT' | 'POSTPAID'
 }
 
 export type Service = {
@@ -316,6 +324,8 @@ export type AdminAgency = {
   contactName: string | null
   contactEmail: string | null
   freeRevisionAllowance: number
+  /** Deposit or in arrears (§6.3.0). Optional: an older API omits it. */
+  billingMode?: 'DEPOSIT' | 'POSTPAID'
   status: 'ACTIVE' | 'INACTIVE'
   notes: string | null
   taskCount: number

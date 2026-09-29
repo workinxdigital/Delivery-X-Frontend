@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { isAdmin, useSession } from '@/components/session'
 import { cn } from '@/lib/utils'
 import { AgenciesPanel } from './agencies-panel'
+import { DisputesPanel } from './disputes-panel'
 import { PeriodsPanel } from './periods-panel'
 import { PricingPanel } from './pricing-panel'
 import { ServicesPanel } from './services-panel'
@@ -51,6 +52,7 @@ const TABS = [
     a screen people skim (§5.6).
   */
   { key: 'periods', label: 'Months' },
+  { key: 'disputes', label: 'Queries' },
 ] as const
 
 /**
@@ -142,6 +144,7 @@ export function AdminScreen() {
       {tab === 'team' && <TeamPanel />}
       {tab === 'pricing' && <PricingPanel />}
       {tab === 'periods' && <PeriodsPanel />}
+      {tab === 'disputes' && <DisputesPanel />}
     </div>
   )
 }
