@@ -225,6 +225,19 @@ export const checkDuplicate = (params: {
 export const exportCsvUrl = (filters: TaskFilters) =>
   `${BASE_URL}/tasks/export.csv${qs(filters)}`
 
+/**
+ * A month's two exports (§5.6).
+ *
+ * The rows are the ledger's own export narrowed to the period, not a second
+ * query — one CSV of deliveries rather than two that could drift apart. The
+ * summary is the grouped sheet the handoff actually asks for.
+ */
+export const periodSummaryCsvUrl = (periodId: string) =>
+  `${BASE_URL}/admin/periods/${periodId}/summary.csv`
+
+export const periodRowsCsvUrl = (periodId: string) =>
+  `${BASE_URL}/tasks/export.csv${qs({ periodId })}`
+
 export type HealthResponse = {
   ok: boolean
   service: string

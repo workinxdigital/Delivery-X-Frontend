@@ -5,7 +5,13 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Pill } from '@/components/pill'
-import { getAdminPeriods, setPeriodLock, type AdminPeriod } from '@/lib/api/client'
+import {
+  getAdminPeriods,
+  periodRowsCsvUrl,
+  periodSummaryCsvUrl,
+  setPeriodLock,
+  type AdminPeriod,
+} from '@/lib/api/client'
 import { GhostButton, PanelHeader, Td, Th } from './panel-parts'
 
 /**
@@ -100,13 +106,14 @@ export function PeriodsPanel() {
               <Th>Rounds</Th>
               <Th>Agencies</Th>
               <Th>Status</Th>
+              <Th>Export</Th>
               <Th />
             </tr>
           </thead>
           <tbody className="divide-rule divide-y">
             {isLoading && (
               <tr>
-                <td className="text-ink-muted px-4 py-3 text-dense" colSpan={7}>
+                <td className="text-ink-muted px-4 py-3 text-dense" colSpan={8}>
                   Loading…
                 </td>
               </tr>
@@ -114,7 +121,7 @@ export function PeriodsPanel() {
 
             {!isLoading && periods.length === 0 && (
               <tr>
-                <td className="text-ink-muted px-4 py-3 text-dense" colSpan={7}>
+                <td className="text-ink-muted px-4 py-3 text-dense" colSpan={8}>
                   No months yet. One appears as soon as a delivery is logged.
                 </td>
               </tr>
@@ -143,6 +150,38 @@ export function PeriodsPanel() {
                     <span className="text-ink-muted text-micro">open</span>
                   )}
                 </Td>
+                {/*
+                  Both exports, on every month whether it is closed or not.
+                  §5.6 calls the close the handoff point, but a month's numbers
+                  are wanted before it is frozen as often as after — that is
+                  what closing it is a decision ABOUT. Plain links rather than
+                  buttons, so the browser downloads them and a middle click
+                  still works.
+                */}
+                <Td>
+                  {p.deliveries === 0 ? (
+                    <span className="text-ink-faint text-micro">nothing to export</span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <DownloadLink
+                        href={periodSummaryCsvUrl(p.id)}
+                        title="One row per agency and service: deliveries, variations and revision rounds"
+                      >
+                        Summary
+                      </DownloadLink>
+                      <span className="text-ink-faint" aria-hidden>
+                        ·
+                      </span>
+                      <DownloadLink
+                        href={periodRowsCsvUrl(p.id)}
+                        title="Every delivery in this month, one row each, with every column"
+                      >
+                        Deliveries
+                      </DownloadLink>
+                    </span>
+                  )}
+                </Td>
+
                 <Td align="right" control>
                   <GhostButton
                     onClick={() => setConfirming(p.id)}
@@ -161,6 +200,34 @@ export function PeriodsPanel() {
         </table>
       </div>
     </div>
+  )
+}
+
+/**
+ * A download, not a navigation.
+ *
+ * `download` alone does not name the file — the server's Content-Disposition
+ * does, and it carries the month — so this only tells the browser to save
+ * rather than to try rendering a CSV in a tab.
+ */
+function DownloadLink({
+  href,
+  title,
+  children,
+}: {
+  href: string
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <a
+      href={href}
+      download
+      title={title}
+      className="text-ink-muted hover:text-ink text-micro underline decoration-dotted underline-offset-2 transition-colors"
+    >
+      {children}
+    </a>
   )
 }
 
