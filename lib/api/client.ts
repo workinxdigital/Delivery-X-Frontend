@@ -350,6 +350,31 @@ export const getPricing = (params: {
   paidRounds?: 'with' | 'without'
 }) => apiFetch<PricingSummary>(`/admin/pricing${qs(params)}`)
 
+// ---------------------------------------------------------------- periods
+
+/** A calendar month, what it holds, and whether it is closed (§5.6). */
+export type AdminPeriod = {
+  id: string
+  periodStart: string
+  periodEnd: string
+  status: 'OPEN' | 'LOCKED'
+  lockedAt: string | null
+  deliveries: number
+  variations: number
+  revisionRounds: number
+  roundsBeyondAllowance: number
+  agencies: number
+}
+
+export const getAdminPeriods = () =>
+  apiFetch<{ periods: AdminPeriod[] }>('/admin/periods').then((r) => r.periods)
+
+export const setPeriodLock = (id: string, lock: boolean) =>
+  apiFetch<{ period: AdminPeriod }>(`/admin/periods/${id}/lock`, {
+    method: 'POST',
+    body: JSON.stringify({ lock }),
+  })
+
 // ---------------------------------------------------------------- team
 
 export const getAdminDeliverers = () =>

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { isAdmin, useSession } from '@/components/session'
 import { cn } from '@/lib/utils'
 import { AgenciesPanel } from './agencies-panel'
+import { PeriodsPanel } from './periods-panel'
 import { PricingPanel } from './pricing-panel'
 import { ServicesPanel } from './services-panel'
 import { TeamPanel } from './team-panel'
@@ -43,6 +44,13 @@ const TABS = [
      identifiers for a word nobody sees.
   */
   { key: 'pricing', label: 'Billing' },
+  /*
+    Closing a month is its own tab rather than a panel on Billing. Billing
+    answers "what is this worth" and is read every day; closing a month happens
+    once a month and freezes what Billing reports, so it does not belong beside
+    a screen people skim (§5.6).
+  */
+  { key: 'periods', label: 'Months' },
 ] as const
 
 /**
@@ -133,6 +141,7 @@ export function AdminScreen() {
       {tab === 'services' && <ServicesPanel />}
       {tab === 'team' && <TeamPanel />}
       {tab === 'pricing' && <PricingPanel />}
+      {tab === 'periods' && <PeriodsPanel />}
     </div>
   )
 }
