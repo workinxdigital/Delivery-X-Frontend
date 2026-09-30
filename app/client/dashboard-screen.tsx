@@ -44,144 +44,123 @@ export function ClientDashboardScreen() {
       </header>
 
       {data.canSeeMoney && (
-        <section className="border-rule bg-surface shadow-card rounded-xl border p-6">
-          <div className="flex flex-wrap items-baseline justify-between gap-4">
-            <div>
-              <p className="text-ink-muted text-micro uppercase tracking-wide">
-                {data.balance.headline.label}
-              </p>
-              <p
-                className={cn(
-                  'display mt-1 text-[2rem] leading-none font-semibold tabular',
-                  /* Overdrawn is the one figure worth colouring: a deposit
-                     account below zero has spent money it has not paid in, and
-                     that is a conversation, not a detail. */
-                  data.balance.headline.amountMinor < 0 && 'text-beyond',
-                )}
-              >
-                {formatMoneyMinor(data.balance.headline.amountMinor)}
-              </p>
-            </div>
+        /*
+          One card, not three (owner, 2026-09-30).
 
-            <dl className="flex flex-wrap gap-x-8 gap-y-2 text-dense">
-              {data.account.billingMode === 'DEPOSIT' && (
-                <Figure label="Paid in" value={formatMoneyMinor(data.balance.creditedMinor)} />
+          It was a headline card and then two more side by side, and two
+          independent cards in a grid cannot agree on height — "paid in" is
+          three rows where "where it went" is two tables, so the left column
+          ended in a column of empty space as tall as itself. A single card
+          with an internal rule has no heights to reconcile.
+
+          The three figures that sat top-right went with it: paid in, projects
+          and extra rounds are exactly what the two halves below now say, and
+          saying a number twice on one screen invites the reader to check
+          whether the two agree.
+        */
+        <section className="border-rule bg-surface shadow-card overflow-hidden rounded-xl border">
+          <div className="border-rule border-b p-6">
+            <p className="text-ink-muted text-micro uppercase tracking-wide">
+              {data.balance.headline.label}
+            </p>
+            <p
+              className={cn(
+                'display mt-1 text-[2.25rem] leading-none font-semibold tabular',
+                /* Overdrawn is the one figure worth colouring: a deposit
+                   account below zero has spent money it has not paid in, and
+                   that is a conversation, not a detail. */
+                data.balance.headline.amountMinor < 0 && 'text-beyond',
               )}
-              <Figure label="Projects" value={formatMoneyMinor(data.balance.consumedProjectsMinor)} />
-              <Figure label="Extra rounds" value={formatMoneyMinor(data.balance.consumedRoundsMinor)} />
-            </dl>
-          </div>
+            >
+              {formatMoneyMinor(data.balance.headline.amountMinor)}
+            </p>
 
-          {data.balance.utilisation !== null && (
-            <div className="mt-5">
-              <div className="bg-wash h-1.5 w-full overflow-hidden rounded-full">
-                <div
-                  className={cn('h-full rounded-full', data.balance.utilisation >= 1 ? 'bg-beyond' : 'bg-lime')}
-                  style={{ width: `${Math.round(data.balance.utilisation * 100)}%` }}
-                />
-              </div>
-              <p className="text-ink-muted mt-1.5 text-micro">
-                {Math.round(data.balance.utilisation * 100)}% of your deposit used
-              </p>
-            </div>
-          )}
-        </section>
-      )}
-
-      {data.canSeeMoney && (
-        <section className="grid gap-6 lg:grid-cols-2">
-          {/*
-            Money in, itemised. "Paid in $15,200" is a figure a client has to
-            take on trust; the deposits behind it are what they reconcile
-            against their own records.
-          */}
-          <div>
-            <h2 className="display mb-3 text-[1.0625rem] font-semibold">What you have paid in</h2>
-            {data.credits.length === 0 ? (
-              <p className="text-ink-muted border-rule bg-surface rounded-xl border p-5 text-dense">
-                No deposits recorded. This account is billed in arrears.
-              </p>
-            ) : (
-              <ul className="border-rule bg-surface divide-rule shadow-card divide-y overflow-hidden rounded-xl border">
-                {data.credits.map((c) => (
-                  <li key={c.id} className="flex items-center gap-4 px-5 py-3">
-                    <span className="min-w-0 grow truncate">{c.description}</span>
-                    <span className="text-ink-muted shrink-0 text-micro">{formatDateOnly(c.occurredOn)}</span>
-                    <span className="tabular w-28 shrink-0 text-right font-medium">
-                      {formatMoneyMinor(c.amountMinor)}
-                    </span>
-                  </li>
-                ))}
-                <li className="bg-wash/60 flex items-center gap-4 px-5 py-3 font-medium">
-                  <span className="grow">Total paid in</span>
-                  <span className="tabular w-28 text-right">
-                    {formatMoneyMinor(data.balance.creditedMinor)}
-                  </span>
-                </li>
-              </ul>
-            )}
-          </div>
-
-          {/*
-            And where it went. "You have spent $4,850" answers nothing; by brand
-            and by service are the two ways a client actually asks. Both are
-            built from the same entries as the balance, so the parts always sum
-            to the whole.
-          */}
-          <div>
-            <h2 className="display mb-3 text-[1.0625rem] font-semibold">Where it has gone</h2>
-            <div className="border-rule bg-surface shadow-card overflow-hidden rounded-xl border">
-              {data.breakdown.byBrand.length === 0 ? (
-                <p className="text-ink-muted p-5 text-dense">Nothing consumed yet.</p>
-              ) : (
-                <table className="w-full border-collapse text-dense">
-                  <thead>
-                    <tr className="border-rule bg-wash/70 text-ink-muted border-b text-left text-micro uppercase tracking-wide">
-                      <th className="px-5 py-2 font-medium">Brand</th>
-                      <th className="px-3 py-2 text-right font-medium">Projects</th>
-                      <th className="px-3 py-2 text-right font-medium">Extra rounds</th>
-                      <th className="px-5 py-2 text-right font-medium">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-rule divide-y">
-                    {data.breakdown.byBrand.map((b) => (
-                      <tr key={b.name}>
-                        <td className="px-5 py-2.5 font-medium">
-                          {b.name}
-                          <span className="text-ink-muted ml-1.5 text-micro">
-                            {b.projects} {b.projects === 1 ? 'project' : 'projects'}
-                          </span>
-                        </td>
-                        <td className="tabular px-3 py-2.5 text-right">{formatMoneyMinor(b.projectsMinor)}</td>
-                        <td className="tabular px-3 py-2.5 text-right">
-                          {b.roundsMinor === 0 ? <span className="text-ink-faint">—</span> : formatMoneyMinor(b.roundsMinor)}
-                        </td>
-                        <td className="tabular px-5 py-2.5 text-right font-medium">{formatMoneyMinor(b.totalMinor)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {data.breakdown.byService.length > 0 && (
-              <div className="border-rule bg-surface shadow-card mt-4 overflow-hidden rounded-xl border">
-                <p className="border-rule text-ink-muted border-b px-5 py-2 text-micro uppercase tracking-wide">
-                  By service
+            {data.balance.utilisation !== null && (
+              <div className="mt-4 max-w-md">
+                <div className="bg-wash h-1.5 w-full overflow-hidden rounded-full">
+                  <div
+                    className={cn('h-full rounded-full', data.balance.utilisation >= 1 ? 'bg-beyond' : 'bg-lime')}
+                    style={{ width: `${Math.round(data.balance.utilisation * 100)}%` }}
+                  />
+                </div>
+                <p className="text-ink-muted mt-1.5 text-micro">
+                  {formatMoneyMinor(data.balance.consumedMinor)} of{' '}
+                  {formatMoneyMinor(data.balance.creditedMinor)} used
                 </p>
-                <ul className="divide-rule divide-y">
-                  {data.breakdown.byService.map((sv) => (
-                    <li key={sv.name} className="flex items-center gap-4 px-5 py-2.5">
-                      <span className="min-w-0 grow truncate">{sv.name}</span>
-                      <span className="text-ink-muted shrink-0 text-micro">
-                        {sv.count} {sv.count === 1 ? 'project' : 'projects'}
-                      </span>
-                      <span className="tabular w-24 shrink-0 text-right">{formatMoneyMinor(sv.amountMinor)}</span>
-                    </li>
-                  ))}
-                </ul>
               </div>
             )}
+          </div>
+
+          {/* Two halves of one card, so they share a top edge and never drift. */}
+          <div className="divide-rule grid md:grid-cols-2 md:divide-x">
+            <div className="p-6">
+              <h2 className="text-ink-muted mb-3 text-micro uppercase tracking-wide">
+                What you have paid in
+              </h2>
+              {data.credits.length === 0 ? (
+                <p className="text-ink-muted text-dense">
+                  No deposits recorded — this account is billed in arrears.
+                </p>
+              ) : (
+                <dl className="text-dense">
+                  {data.credits.map((c) => (
+                    <div key={c.id} className="border-rule flex items-baseline gap-3 border-b py-2 last:border-0">
+                      <dt className="min-w-0 grow truncate">
+                        {c.description}
+                        <span className="text-ink-muted ml-2 text-micro">{formatDateOnly(c.occurredOn)}</span>
+                      </dt>
+                      <dd className="tabular shrink-0">{formatMoneyMinor(c.amountMinor)}</dd>
+                    </div>
+                  ))}
+                  <div className="flex items-baseline gap-3 pt-2 font-medium">
+                    <dt className="grow">Total</dt>
+                    <dd className="tabular">{formatMoneyMinor(data.balance.creditedMinor)}</dd>
+                  </div>
+                </dl>
+              )}
+            </div>
+
+            <div className="p-6">
+              <h2 className="text-ink-muted mb-3 text-micro uppercase tracking-wide">
+                Where it has gone
+              </h2>
+              {data.breakdown.byBrand.length === 0 ? (
+                <p className="text-ink-muted text-dense">Nothing consumed yet.</p>
+              ) : (
+                <>
+                  <dl className="text-dense">
+                    {data.breakdown.byBrand.map((b) => (
+                      <div key={b.name} className="border-rule flex items-baseline gap-3 border-b py-2">
+                        <dt className="min-w-0 grow truncate">
+                          {b.name}
+                          <span className="text-ink-muted ml-2 text-micro">
+                            {b.projects} {b.projects === 1 ? 'project' : 'projects'}
+                            {b.roundsMinor > 0 && ` · ${formatMoneyMinor(b.roundsMinor)} in extra rounds`}
+                          </span>
+                        </dt>
+                        <dd className="tabular shrink-0">{formatMoneyMinor(b.totalMinor)}</dd>
+                      </div>
+                    ))}
+                    <div className="flex items-baseline gap-3 pt-2 font-medium">
+                      <dt className="grow">Total</dt>
+                      <dd className="tabular">{formatMoneyMinor(data.balance.consumedMinor)}</dd>
+                    </div>
+                  </dl>
+
+                  {data.breakdown.byService.length > 0 && (
+                    <p className="text-ink-muted mt-4 text-micro leading-relaxed">
+                      {/* By service reads as a sentence rather than a second
+                          table: it is a footnote to the figures above, and a
+                          table gave it the same weight as the money itself. */}
+                      By service —{' '}
+                      {data.breakdown.byService
+                        .map((sv) => `${sv.name} ${formatMoneyMinor(sv.amountMinor)}`)
+                        .join(' · ')}
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </section>
       )}
@@ -224,15 +203,6 @@ export function ClientDashboardScreen() {
           </ul>
         )}
       </section>
-    </div>
-  )
-}
-
-function Figure({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-ink-muted text-micro uppercase tracking-wide">{label}</dt>
-      <dd className="tabular mt-0.5 font-medium">{value}</dd>
     </div>
   )
 }
