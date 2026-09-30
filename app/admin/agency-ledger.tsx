@@ -70,6 +70,23 @@ export function AgencyLedger({ agencyId, agencyName, billingMode }: {
 
   const b = data?.balance
 
+  /*
+   * What the balance becomes if this is posted.
+   *
+   * The ledger has always carried the remainder — it is a running sum, so a
+   * top-up adds to what was left rather than replacing it. But an admin typing
+   * into an empty box cannot see that, and "does this wipe their balance?" is
+   * not a question anyone should have to answer by trying it on a real client.
+   * So the arithmetic is shown before the click.
+   */
+  const typedMinor = (() => {
+    const n = Number(amount.replace(/[^0-9.-]/g, ''))
+    if (!Number.isFinite(n) || amount.trim() === '') return null
+    const minor = Math.round(n * 100)
+    return adding === 'DEPOSIT_CREDIT' ? Math.abs(minor) : minor
+  })()
+  const after = b && typedMinor !== null ? b.availableMinor + typedMinor : null
+
   return (
     <div>
       {b && (
@@ -114,6 +131,18 @@ export function AgencyLedger({ agencyId, agencyName, billingMode }: {
               <Input value={reason} onChange={(e) => setReason(e.target.value)} />
             </Field>
           )}
+          {after !== null && typedMinor !== null && typedMinor !== 0 && b && (
+            <p className="text-ink-muted sm:col-span-2 text-micro">
+              {billingMode === 'DEPOSIT' ? 'Available now' : 'Accrued now'}{' '}
+              <span className="tabular text-ink">{formatMoneyMinor(b.availableMinor)}</span>
+              {' → after this '}
+              <span className="tabular text-ink font-medium">{formatMoneyMinor(after)}</span>
+              {adding === 'DEPOSIT_CREDIT' && b.availableMinor > 0 && (
+                <> · their remaining {formatMoneyMinor(b.availableMinor)} is carried, not replaced</>
+              )}
+            </p>
+          )}
+
           <div className="flex items-center gap-2 sm:col-span-2">
             <PrimaryButton
               type="submit"
