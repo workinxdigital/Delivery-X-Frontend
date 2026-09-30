@@ -165,16 +165,72 @@ export function ClientDashboardScreen() {
         </section>
       )}
 
-      <section className="grid gap-4 sm:grid-cols-4">
-        <Tile label="Projects" value={data.counts.projects} />
-        <Tile label="Variations" value={data.counts.variations} />
-        <Tile label="Revision rounds" value={data.counts.revisionRounds} />
+      {/*
+        Three figures, each with the sentence that makes it mean something
+        (owner, 2026-09-30). It was four bare numbers in our vocabulary:
+        "Variations 3" and "Past included 2" are terms from the ledger, not
+        words a client would use, and a number nobody can name is a number
+        nobody reads.
+      */}
+      <section className="grid gap-4 sm:grid-cols-3">
         <Tile
-          label="Past included"
-          value={data.counts.paidRounds}
+          label="Projects delivered"
+          value={data.counts.projects}
+          note="Each one is a service delivered for a listing."
+        />
+        <Tile
+          label="Extra products covered"
+          value={data.counts.variations}
+          note={
+            data.counts.variations === 0
+              ? 'Every project so far covered its main product only.'
+              : 'Product variations beyond the main listing, each charged at its own complexity.'
+          }
+        />
+        <Tile
+          label="Revision rounds used"
+          value={data.counts.revisionRounds}
+          note={
+            data.counts.paidRounds === 0
+              ? `All within the ${data.account.includedRounds} included on each project.`
+              : `${data.counts.paidRounds} went beyond the ${data.account.includedRounds} included and were charged.`
+          }
           tone={data.counts.paidRounds > 0 ? 'beyond' : undefined}
         />
       </section>
+
+      {/*
+        How the account works, in three lines.
+        
+        The single largest gap in a client's understanding was not any figure
+        on this page — it was the model behind them. Somebody reading "extra
+        rounds $400" has no way to know that three were free, or that a High
+        product costs more than a Low one, unless it is written down where the
+        figures are.
+      */}
+      {data.canSeeMoney && (
+        <section className="border-rule bg-wash/40 rounded-xl border p-5">
+          <h2 className="text-ink-muted mb-2 text-micro uppercase tracking-wide">
+            How your account works
+          </h2>
+          <ul className="text-ink-muted grid gap-1.5 text-dense sm:grid-cols-3">
+            <li>
+              <span className="text-ink font-medium">Every product is charged</span> at the
+              complexity it was built to — each variation has its own price.
+            </li>
+            <li>
+              <span className="text-ink font-medium">
+                {data.account.includedRounds} revision rounds are included
+              </span>{' '}
+              on every project, whatever its size.
+            </li>
+            <li>
+              <span className="text-ink font-medium">Round {data.account.includedRounds + 1} onward is charged</span>{' '}
+              at a rate set for that product&rsquo;s complexity.
+            </li>
+          </ul>
+        </section>
+      )}
 
       <section>
         <div className="mb-3 flex items-baseline justify-between">
@@ -207,13 +263,25 @@ export function ClientDashboardScreen() {
   )
 }
 
-function Tile({ label, value, tone }: { label: string; value: number; tone?: 'beyond' }) {
+function Tile({
+  label,
+  value,
+  note,
+  tone,
+}: {
+  label: string
+  value: number
+  /** The sentence that says what the number means. Never optional in practice. */
+  note: string
+  tone?: 'beyond'
+}) {
   return (
     <div className="border-rule bg-surface rounded-xl border px-5 py-4">
       <p className="text-ink-muted text-micro uppercase tracking-wide">{label}</p>
       <p className={cn('display mt-1 text-[1.5rem] leading-none font-semibold tabular', tone === 'beyond' && 'text-beyond')}>
         {value}
       </p>
+      <p className="text-ink-muted mt-2 text-micro leading-snug">{note}</p>
     </div>
   )
 }

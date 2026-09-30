@@ -64,12 +64,16 @@ export function ClientProjectsScreen() {
         <table className="w-full border-collapse text-dense">
           <thead>
             <tr className="border-rule-strong bg-wash/70 border-b text-left">
+              {/*
+                The client's words, not the ledger's. "Variations" is what we
+                call a child product internally; "Products" is what they are.
+              */}
               <Th>Project</Th>
               <Th>Brand</Th>
-              <Th>Service</Th>
+              <Th>What was delivered</Th>
               <Th>Complexity</Th>
-              <Th>Variations</Th>
-              <Th>Rounds</Th>
+              <Th>Extra products</Th>
+              <Th>Revision rounds</Th>
               <Th>Delivered</Th>
               {money && <Th align="right">Amount</Th>}
             </tr>
@@ -124,8 +128,36 @@ export function ClientProjectsScreen() {
               </tr>
             ))}
           </tbody>
+
+          {/*
+            A total, because this table is the evidence behind the figure on
+            the account page and a reader should not have to add eleven rows to
+            check that it matches.
+          */}
+          {money && projects.length > 0 && (
+            <tfoot>
+              <tr className="border-rule-strong bg-wash/70 border-t font-medium">
+                <Td colSpan={7}>
+                  {projects.length} {projects.length === 1 ? 'project' : 'projects'}
+                  {brandId && ' (filtered)'}
+                </Td>
+                <Td align="right" className="tabular whitespace-nowrap">
+                  {formatMoneyMinor(
+                    projects.reduce((n, p) => n + (p.amountMinor ?? 0), 0),
+                  )}
+                </Td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
+
+      {money && (
+        <p className="text-ink-muted text-micro">
+          Amounts include the project itself and any revision rounds charged on it. Open a project
+          to see how each was worked out.
+        </p>
+      )}
     </div>
   )
 }
@@ -143,15 +175,21 @@ function Td({
   className,
   align,
   title,
+  colSpan,
 }: {
   children?: React.ReactNode
   className?: string
   align?: 'right'
   /** Long names truncate, so the full one stays reachable on hover (§5.11). */
   title?: string
+  colSpan?: number
 }) {
   return (
-    <td title={title} className={cn('px-4 py-3 align-middle', align === 'right' && 'text-right', className)}>
+    <td
+      title={title}
+      colSpan={colSpan}
+      className={cn('px-4 py-3 align-middle', align === 'right' && 'text-right', className)}
+    >
       {children}
     </td>
   )
