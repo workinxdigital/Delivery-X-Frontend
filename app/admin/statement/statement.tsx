@@ -105,6 +105,16 @@ export function Statement() {
   const rows = data?.deliveries ?? []
 
   /*
+   * Counts exclude rework; amounts include it (§5.7).
+   *
+   * A REWORK row charges for rounds on a job delivered in an earlier range, so
+   * the work it bills for was counted then — counting it again would report the
+   * same delivery as delivered twice. The server's own totals filter this way;
+   * the two stats below were reducing over every row, rework included.
+   */
+  const deliveredRows = rows.filter((r) => r.kind !== 'REWORK')
+
+  /*
    * Totalled from the rows, because the answer is now per delivery.
    *
    * The server's own total cannot be used any more: it charges everything, and
@@ -214,16 +224,28 @@ export function Statement() {
                 same figure the ledger and the Billing screen report. */}
             <Stat
               label="Deliveries"
-              value={String(rows.reduce((n, r) => n + r.lines.length, 0))}
+              value={String(deliveredRows.reduce((n, r) => n + r.lines.length, 0))}
             />
             {/* Children only (§2.4): the first line of each delivery is the
                 service against the parent listing, not a variation. Counted
                 here rather than taken from the server's total, which counts
                 priced lines because the Billing screen's figures explain money
-                and every line is charged. */}
+                and every line is charged.
+
+                One parent line per delivery THAT HAS ONE (§5.1). This
+                subtracted one from every delivery, so a children-only delivery
+                lost the parent it never had: one SKU reported 0 variations
+                where the ledger and the rollup beside it both said 1. The
+                server's own stat was fixed for this; the statement kept a
+                second copy of the old arithmetic. */}
             <Stat
               label="Variations"
-              value={String(rows.reduce((n, r) => n + Math.max(0, r.lines.length - 1), 0))}
+              value={String(
+                deliveredRows.reduce(
+                  (n, r) => n + Math.max(0, r.lines.length - (r.hasParentLine === false ? 0 : 1)),
+                  0,
+                ),
+              )}
             />
             {anyRevisions && <Stat label="Paid rounds" value={String(paidRoundsCharged)} />}
             <Stat label="Deliverables" value={formatMoneyMinor(data.totals.variationsMinor)} />
