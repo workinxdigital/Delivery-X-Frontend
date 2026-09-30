@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Combobox } from '@/components/combobox'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { getAdminBrands, mergeBrand, setBrandCommercials } from '@/lib/api/client'
+import { getAdminBrands, mergeBrand } from '@/lib/api/client'
 import { GhostButton, Td, Th } from './panel-parts'
 import { cn } from '@/lib/utils'
 
@@ -32,33 +32,6 @@ export function AgencyBrands({ agencyId, agencyName }: { agencyId: string; agenc
   const { data: brands = [], isLoading } = useQuery({
     queryKey: ['admin', 'brands', agencyId],
     queryFn: () => getAdminBrands(agencyId),
-  })
-
-  /**
-   * The per-brand money toggle (§6.2).
-   *
-   * Here rather than on the agency, because the decision is per brand: one
-   * client company often has a team that tracks delivery and one person who
-   * handles the bill. Defaults to off, and switching it off again takes money
-   * away from that brand's contacts on their next page load.
-   */
-  const commercials = useMutation({
-    mutationFn: ({ id, on }: { id: string; on: boolean }) => setBrandCommercials(id, on),
-    onSuccess: (r, vars) => {
-      const brand = brands.find((b) => b.id === vars.id)
-      toast(
-        r.brand.showsCommercials
-          ? `${brand?.name ?? 'That brand'} can now see money`
-          : `${brand?.name ?? 'That brand'} can no longer see money`,
-        {
-          description: r.brand.showsCommercials
-            ? 'Their contacts see amounts, balances and charges for this brand.'
-            : 'Their contacts see what was delivered, and no figures at all.',
-        },
-      )
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'brands', agencyId] })
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : 'That did not work'),
   })
 
   const merge = useMutation({
@@ -127,7 +100,6 @@ export function AgencyBrands({ agencyId, agencyName }: { agencyId: string; agenc
             <Th>Brand</Th>
             <Th>Deliveries</Th>
             <Th>ASINs</Th>
-            <Th>Sees money</Th>
             <Th />
           </tr>
         </thead>
@@ -136,38 +108,6 @@ export function AgencyBrands({ agencyId, agencyName }: { agencyId: string; agenc
             <tr key={b.id}>
               <Td className="font-medium">{b.name}</Td>
               <Td className="tabular">{b.taskCount}</Td>
-              <Td control>
-                {/*
-                  A switch rather than a tick, because it governs what an
-                  outsider can see and the two states need equal weight — an
-                  unticked box reads as "not done yet" where this is a decision
-                  somebody made.
-                */}
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={b.showsCommercials}
-                  disabled={commercials.isPending}
-                  onClick={() => commercials.mutate({ id: b.id, on: !b.showsCommercials })}
-                  title={
-                    b.showsCommercials
-                      ? `${b.name} contacts see amounts. Click to hide them.`
-                      : `${b.name} contacts see no figures. Click to show them.`
-                  }
-                  className={cn(
-                    'relative h-5 w-9 rounded-full transition-colors duration-[120ms]',
-                    b.showsCommercials ? 'bg-lime' : 'bg-rule-strong',
-                  )}
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'bg-paper absolute top-0.5 h-4 w-4 rounded-full shadow-sm transition-[left] duration-[120ms]',
-                      b.showsCommercials ? 'left-[1.125rem]' : 'left-0.5',
-                    )}
-                  />
-                </button>
-              </Td>
               <Td align="right" control>
                 {source === b.id ? (
                   /*
