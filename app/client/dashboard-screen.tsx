@@ -88,45 +88,6 @@ export function ClientDashboardScreen() {
         </section>
       )}
 
-      <section className="grid gap-4 sm:grid-cols-4">
-        <Tile label="Projects" value={data.counts.projects} />
-        <Tile label="Variations" value={data.counts.variations} />
-        <Tile label="Revision rounds" value={data.counts.revisionRounds} />
-        <Tile
-          label="Past included"
-          value={data.counts.paidRounds}
-          tone={data.counts.paidRounds > 0 ? 'beyond' : undefined}
-        />
-      </section>
-
-      <section>
-        <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="display text-[1.0625rem] font-semibold">Recent projects</h2>
-          <Link href="/client/projects" className="text-ink-muted hover:text-ink text-micro underline decoration-dotted underline-offset-2">
-            See all
-          </Link>
-        </div>
-
-        {data.recent.length === 0 ? (
-          <p className="text-ink-muted border-rule bg-surface rounded-xl border p-6 text-dense">
-            Nothing has been delivered yet. Projects appear here as soon as they are logged.
-          </p>
-        ) : (
-          <ul className="border-rule bg-surface divide-rule shadow-card divide-y overflow-hidden rounded-xl border">
-            {data.recent.map((p) => (
-              <li key={p.id}>
-                <Link href={`/client/projects/${p.id}`} className="hover:bg-wash flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 transition-colors">
-                  <CodePill>{p.taskCode}</CodePill>
-                  <span className="font-medium">{p.serviceName}</span>
-                  <span className="text-ink-muted text-dense">{p.brandName}</span>
-                  <span className="text-ink-muted ml-auto text-micro">{formatDateOnly(p.deliveredOn)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
       {data.canSeeMoney && (
         <section className="grid gap-6 lg:grid-cols-2">
           {/*
@@ -225,6 +186,44 @@ export function ClientDashboardScreen() {
         </section>
       )}
 
+      <section className="grid gap-4 sm:grid-cols-4">
+        <Tile label="Projects" value={data.counts.projects} />
+        <Tile label="Variations" value={data.counts.variations} />
+        <Tile label="Revision rounds" value={data.counts.revisionRounds} />
+        <Tile
+          label="Past included"
+          value={data.counts.paidRounds}
+          tone={data.counts.paidRounds > 0 ? 'beyond' : undefined}
+        />
+      </section>
+
+      <section>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="display text-[1.0625rem] font-semibold">Recent projects</h2>
+          <Link href="/client/projects" className="text-ink-muted hover:text-ink text-micro underline decoration-dotted underline-offset-2">
+            See all
+          </Link>
+        </div>
+
+        {data.recent.length === 0 ? (
+          <p className="text-ink-muted border-rule bg-surface rounded-xl border p-6 text-dense">
+            Nothing has been delivered yet. Projects appear here as soon as they are logged.
+          </p>
+        ) : (
+          <ul className="border-rule bg-surface divide-rule shadow-card divide-y overflow-hidden rounded-xl border">
+            {data.recent.map((p) => (
+              <li key={p.id}>
+                <Link href={`/client/projects/${p.id}`} className="hover:bg-wash flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 transition-colors">
+                  <CodePill>{p.taskCode}</CodePill>
+                  <span className="font-medium">{p.serviceName}</span>
+                  <span className="text-ink-muted text-dense">{p.brandName}</span>
+                  <span className="text-ink-muted ml-auto text-micro">{formatDateOnly(p.deliveredOn)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }
