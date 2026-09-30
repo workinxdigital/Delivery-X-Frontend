@@ -10,6 +10,7 @@ import { ApiError, getAgencyRates, saveAgencyRate } from '@/lib/api/client'
 import type { Complexity } from '@/lib/api/types'
 import { COMPLEXITY_LABELS, CURRENCY, formatCategory, formatMoneyMinor } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { AgencyPayment } from './agency-payment'
 import { GhostButton, PrimaryButton, Td, Th } from './panel-parts'
 
 const TIERS: Complexity[] = ['LOW', 'MEDIUM', 'HIGH', 'STANDALONE']
@@ -113,7 +114,14 @@ export function AgencyRates({ agencyId, agencyName }: { agencyId: string; agency
 
   return (
     <div className="space-y-2">
-      <p className="text-ink-muted text-micro">
+      {/*
+        What they pay, and what they have paid — one sitting (owner,
+        2026-09-30). Sending the second to a different panel meant the person
+        who had just agreed a deposit had to go and find somewhere to put it.
+      */}
+      <AgencyPayment agencyId={agencyId} agencyName={agencyName} />
+
+      <p className="text-ink-muted pt-2 text-micro">
         Price the services {agencyName} actually buys. An empty box is not priced — those
         are named on the Pricing screen rather than counted as nothing. Zero means free,
         which is not the same as empty.
