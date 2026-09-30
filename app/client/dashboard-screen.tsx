@@ -43,6 +43,56 @@ export function ClientDashboardScreen() {
         </p>
       </header>
 
+      {/*
+        The rules, first (owner, 2026-09-30).
+
+        They sat under the figures they explain, which is the wrong way round:
+        a reader met "extra rounds $400" with no way to know three were free,
+        and only learned the model after they had already tried to make sense
+        of the numbers without it. Three rules, numbered, before anything they
+        govern.
+      */}
+      {data.canSeeMoney && (
+        <section className="border-rule bg-surface shadow-card rounded-xl border p-6">
+          <h2 className="display text-[1.0625rem] font-semibold">How your account works</h2>
+          <ol className="mt-4 grid gap-4 sm:grid-cols-3">
+            {[
+              <>
+                <span className="text-ink font-medium">Every product is charged</span> at the
+                complexity it was built to. A listing with three variations is three products,
+                each at its own price.
+              </>,
+              <>
+                <span className="text-ink font-medium">
+                  {data.account.includedRounds} revision rounds are included
+                </span>{' '}
+                on every project, whatever its size — they cost you nothing.
+              </>,
+              <>
+                <span className="text-ink font-medium">
+                  Round {data.account.includedRounds + 1} onward is charged
+                </span>{' '}
+                at a rate set for that product&rsquo;s complexity, and appears on the project it
+                belongs to.
+              </>,
+            ].map((rule, i) => (
+              <li key={i} className="flex gap-3">
+                {/* The numeral carries the brand colour: these are the three
+                    things worth reading on the page, so they get the one
+                    accent this screen spends. */}
+                <span
+                  aria-hidden
+                  className="bg-lime text-noir mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-micro font-semibold tabular"
+                >
+                  {i + 1}
+                </span>
+                <span className="text-ink-muted text-dense leading-snug">{rule}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
       {data.canSeeMoney && (
         /*
           One card, not three (owner, 2026-09-30).
@@ -198,39 +248,6 @@ export function ClientDashboardScreen() {
           tone={data.counts.paidRounds > 0 ? 'beyond' : undefined}
         />
       </section>
-
-      {/*
-        How the account works, in three lines.
-        
-        The single largest gap in a client's understanding was not any figure
-        on this page — it was the model behind them. Somebody reading "extra
-        rounds $400" has no way to know that three were free, or that a High
-        product costs more than a Low one, unless it is written down where the
-        figures are.
-      */}
-      {data.canSeeMoney && (
-        <section className="border-rule bg-wash/40 rounded-xl border p-5">
-          <h2 className="text-ink-muted mb-2 text-micro uppercase tracking-wide">
-            How your account works
-          </h2>
-          <ul className="text-ink-muted grid gap-1.5 text-dense sm:grid-cols-3">
-            <li>
-              <span className="text-ink font-medium">Every product is charged</span> at the
-              complexity it was built to — each variation has its own price.
-            </li>
-            <li>
-              <span className="text-ink font-medium">
-                {data.account.includedRounds} revision rounds are included
-              </span>{' '}
-              on every project, whatever its size.
-            </li>
-            <li>
-              <span className="text-ink font-medium">Round {data.account.includedRounds + 1} onward is charged</span>{' '}
-              at a rate set for that product&rsquo;s complexity.
-            </li>
-          </ul>
-        </section>
-      )}
 
       <section>
         <div className="mb-3 flex items-baseline justify-between">
