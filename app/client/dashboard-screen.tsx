@@ -38,60 +38,32 @@ export function ClientDashboardScreen() {
       <header>
         <h1 className="display text-[1.75rem] leading-tight font-semibold">{data.account.name}</h1>
         <p className="text-ink-muted mt-1 text-dense">
-          Everything delivered for you, as your project manager logs it.{' '}
-          {data.account.includedRounds} revision rounds are included on each project.
+          Everything delivered for you, as your project manager logs it.
         </p>
+
+        {/*
+          The rules, in one line (owner, 2026-09-30).
+
+          They were a full card with numbered markers, which took more space and
+          more attention than three facts deserve — a reader needs them within
+          reach, not in the way. One muted line, above the figures they govern,
+          with only the operative phrases in full ink.
+        */}
+        {data.canSeeMoney && (
+          <p className="text-ink-muted mt-3 text-micro leading-relaxed">
+            <span className="text-ink font-medium">Each product is charged</span> at its own
+            complexity{' · '}
+            <span className="text-ink font-medium">
+              {data.account.includedRounds} revision rounds are included
+            </span>{' '}
+            on every project{' · '}
+            <span className="text-ink font-medium">
+              round {data.account.includedRounds + 1} onward is charged
+            </span>{' '}
+            at that product&rsquo;s rate
+          </p>
+        )}
       </header>
-
-      {/*
-        The rules, first (owner, 2026-09-30).
-
-        They sat under the figures they explain, which is the wrong way round:
-        a reader met "extra rounds $400" with no way to know three were free,
-        and only learned the model after they had already tried to make sense
-        of the numbers without it. Three rules, numbered, before anything they
-        govern.
-      */}
-      {data.canSeeMoney && (
-        <section className="border-rule bg-surface shadow-card rounded-xl border p-6">
-          <h2 className="display text-[1.0625rem] font-semibold">How your account works</h2>
-          <ol className="mt-4 grid gap-4 sm:grid-cols-3">
-            {[
-              <>
-                <span className="text-ink font-medium">Every product is charged</span> at the
-                complexity it was built to. A listing with three variations is three products,
-                each at its own price.
-              </>,
-              <>
-                <span className="text-ink font-medium">
-                  {data.account.includedRounds} revision rounds are included
-                </span>{' '}
-                on every project, whatever its size — they cost you nothing.
-              </>,
-              <>
-                <span className="text-ink font-medium">
-                  Round {data.account.includedRounds + 1} onward is charged
-                </span>{' '}
-                at a rate set for that product&rsquo;s complexity, and appears on the project it
-                belongs to.
-              </>,
-            ].map((rule, i) => (
-              <li key={i} className="flex gap-3">
-                {/* The numeral carries the brand colour: these are the three
-                    things worth reading on the page, so they get the one
-                    accent this screen spends. */}
-                <span
-                  aria-hidden
-                  className="bg-lime text-noir mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-micro font-semibold tabular"
-                >
-                  {i + 1}
-                </span>
-                <span className="text-ink-muted text-dense leading-snug">{rule}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
 
       {data.canSeeMoney && (
         /*
