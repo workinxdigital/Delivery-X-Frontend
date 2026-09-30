@@ -141,7 +141,7 @@ export function ClientProjectsScreen() {
                 call a child product internally; "Products" is what they are.
               */}
               <Th>Project</Th>
-              <Th>Brand</Th>
+              <Th>Product</Th>
               <Th>What was delivered</Th>
               <Th>Complexity</Th>
               <Th>Extra products</Th>
@@ -170,7 +170,25 @@ export function ClientProjectsScreen() {
                     <CodePill>{p.taskCode}</CodePill>
                   </Link>
                 </Td>
-                <Td className="max-w-[16ch] truncate font-medium" title={p.brandName}>{p.brandName}</Td>
+                {/*
+                  The listing, with the brand beneath it (owner, 2026-09-30).
+
+                  The column was the brand alone, which repeated down the page
+                  — a client is already scoped to their own account, so the
+                  brand is close to constant and is a filter besides. What
+                  actually differs row to row is the product, and it was not on
+                  this table at all: "which listing was that for" could only be
+                  answered by opening the project.
+                */}
+                <Td className="max-w-[22ch]">
+                  <span className="block truncate font-medium" title={p.productName ?? p.asinCode ?? undefined}>
+                    {p.productName ?? p.asinCode ?? <span className="text-ink-faint">Not recorded</span>}
+                  </span>
+                  <span className="text-ink-muted block truncate text-micro" title={p.brandName}>
+                    {p.brandName}
+                    {p.asinCode && p.productName ? ` · ${p.asinCode}` : ''}
+                  </span>
+                </Td>
                 <Td className="max-w-[18ch] truncate" title={p.serviceName}>{p.serviceName}</Td>
                 <Td>
                   <span className="flex flex-wrap gap-1">
