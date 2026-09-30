@@ -575,6 +575,8 @@ export type ClientLedgerEntry = {
   disputeNote: string | null
   brandName: string | null
   taskCode: string | null
+  /** Present when the entry belongs to a project, so the row can open it. */
+  taskId: string | null
   detail: ChargeDetail | null
 }
 

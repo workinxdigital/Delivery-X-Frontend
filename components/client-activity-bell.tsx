@@ -84,7 +84,7 @@ export function ClientActivityBell() {
       </button>
 
       {open && (
-        <div className="glass border-rule shadow-card absolute right-0 top-10 z-50 w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-xl border">
+        <div className="glass border-rule bg-surface shadow-pop absolute right-0 top-10 z-50 w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-xl border">
           <div className="border-rule flex items-baseline justify-between border-b px-4 py-3">
             <p className="text-dense font-medium">Account activity</p>
             <p className="text-ink-muted tabular text-micro">
@@ -96,17 +96,45 @@ export function ClientActivityBell() {
             <p className="text-ink-muted px-4 py-6 text-dense">Nothing yet.</p>
           ) : (
             <ul className="divide-rule max-h-[22rem] divide-y overflow-y-auto">
-              {data.entries.map((e) => (
-                <li key={e.id} className={cn('flex items-start gap-3 px-4 py-2.5', e.isNew && 'bg-wash/50')}>
-                  <span className="min-w-0 grow">
-                    <span className="block truncate text-dense">{e.description}</span>
-                    <span className="text-ink-muted text-micro">{formatDateOnly(e.occurredOn)}</span>
-                  </span>
-                  <span className={cn('tabular shrink-0 text-dense', e.amountMinor > 0 ? 'text-ink font-medium' : 'text-ink-muted')}>
-                    {formatMoneyMinor(e.amountMinor)}
-                  </span>
-                </li>
-              ))}
+              {data.entries.map((e) => {
+                const body = (
+                  <>
+                    <span className="min-w-0 grow">
+                      <span className="block truncate text-dense">{e.description}</span>
+                      <span className="text-ink-muted text-micro">{formatDateOnly(e.occurredOn)}</span>
+                    </span>
+                    <span
+                      className={cn(
+                        'tabular shrink-0 text-dense',
+                        e.amountMinor > 0 ? 'text-ink font-medium' : 'text-ink-muted',
+                      )}
+                    >
+                      {formatMoneyMinor(e.amountMinor)}
+                    </span>
+                  </>
+                )
+                /*
+                  A row links out only where there is somewhere to go — a charge
+                  belongs to a project, a deposit belongs to nothing. The same
+                  rule the admin feed follows (§5.8): a link that lands nowhere
+                  is worse than no link.
+                */
+                return (
+                  <li key={e.id} className={cn(e.isNew && 'bg-wash/50')}>
+                    {e.taskId ? (
+                      <Link
+                        href={`/client/projects/${e.taskId}`}
+                        onClick={() => setOpen(false)}
+                        className="hover:bg-wash flex items-start gap-3 px-4 py-2.5 transition-colors"
+                      >
+                        {body}
+                      </Link>
+                    ) : (
+                      <span className="flex items-start gap-3 px-4 py-2.5">{body}</span>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           )}
 

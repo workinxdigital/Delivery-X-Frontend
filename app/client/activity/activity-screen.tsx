@@ -118,7 +118,15 @@ export function ClientActivityScreen() {
 function Description({ entry: e }: { entry: ClientLedgerEntry }) {
   return (
     <span className="flex flex-wrap items-center gap-2">
-      <span>{e.description}</span>
+      {/* The description opens the project it belongs to, where there is one —
+          a deposit belongs to nothing and stays plain text. */}
+      {e.taskId ? (
+        <Link href={`/client/projects/${e.taskId}`} className="hover:text-ink underline decoration-dotted underline-offset-2">
+          {e.description}
+        </Link>
+      ) : (
+        <span>{e.description}</span>
+      )}
       {e.taskCode && <CodePill>{e.taskCode}</CodePill>}
       {e.disputed && <Pill tone="beyond">flagged</Pill>}
       {e.kind === 'REVERSAL' && <Pill tone="outline">credit</Pill>}
