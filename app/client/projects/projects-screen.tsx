@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useState } from 'react'
 import { CodePill, ComplexityPill } from '@/components/pill'
-import { getClientProjects } from '@/lib/api/client'
+import { getClientProjects, type ClientProjectFilters } from '@/lib/api/client'
 import { formatDateOnly, formatMoneyMinor } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -17,48 +17,120 @@ import { cn } from '@/lib/utils'
  * have, which is a worse answer than not showing the column.
  */
 export function ClientProjectsScreen() {
-  const [brandId, setBrandId] = useState<string>('')
+  const [filters, setFilters] = useState<ClientProjectFilters>({})
 
   const { data, isLoading } = useQuery({
-    queryKey: ['client', 'projects', brandId],
-    queryFn: () => getClientProjects(brandId ? { brandId } : {}),
+    queryKey: ['client', 'projects', filters],
+    queryFn: () => getClientProjects(filters),
+    /* Keeps the last result on screen while a new filter loads, so the table
+       does not blink to "Loading" on every dropdown change. */
+    placeholderData: (prev) => prev,
   })
 
   const projects = data?.projects ?? []
   const money = data?.canSeeMoney ?? false
+  const options = data?.filters
+  const active = Object.values(filters).filter(Boolean).length
 
-  /* Built from the rows rather than fetched: the brands a client may filter by
-     are exactly the brands they can see, so deriving them cannot disagree with
-     what the table holds. */
-  const brands = [...new Map(projects.map((p) => [p.brandId, p.brandName])).entries()]
+  const set = (patch: Partial<ClientProjectFilters>) =>
+    setFilters((f) => {
+      const next = { ...f, ...patch }
+      /* An empty string is "no filter", not a filter for the empty value. */
+      for (const k of Object.keys(next) as (keyof ClientProjectFilters)[]) {
+        if (!next[k]) delete next[k]
+      }
+      return next
+    })
 
   return (
     <div data-measure="wide" className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="display text-[1.75rem] leading-tight font-semibold">Projects</h1>
-          <p className="text-ink-muted mt-1 text-dense">
-            Everything delivered for you, newest first.
-          </p>
-        </div>
-
-        {brands.length > 1 && (
-          <label className="text-dense">
-            <span className="text-ink-muted mr-2 text-micro">Brand</span>
-            <select
-              data-slot="control"
-              value={brandId}
-              onChange={(e) => setBrandId(e.target.value)}
-              className="border-control bg-surface rounded-md border px-2 py-1 text-dense"
-            >
-              <option value="">All brands</option>
-              {brands.map(([id, name]) => (
-                <option key={id} value={id}>{name}</option>
-              ))}
-            </select>
-          </label>
-        )}
+      <header>
+        <h1 className="display text-[1.75rem] leading-tight font-semibold">Projects</h1>
+        <p className="text-ink-muted mt-1 text-dense">
+          Everything delivered for you, newest first.
+        </p>
       </header>
+
+      {/*
+        The filters carry their own counts (owner, 2026-09-30).
+        
+        "How many Basic A+ projects have we had" is answerable from the picker
+        before anything is chosen, which is the question that prompted these —
+        a dropdown of bare names would have made the reader select each one in
+        turn to find out.
+
+        Counted across the whole account rather than the filtered set, so
+        choosing a service does not empty the list of every other service.
+      */}
+      <section className="border-rule bg-surface flex flex-wrap items-end gap-3 rounded-xl border p-4">
+        <Picker
+          label="Service"
+          value={filters.serviceId ?? ''}
+          onChange={(v) => set({ serviceId: v || undefined })}
+          all="All services"
+          options={(options?.services ?? []).map((o) => ({ value: o.id, label: `${o.name} (${o.count})` }))}
+        />
+        {(options?.brands.length ?? 0) > 1 && (
+          <Picker
+            label="Brand"
+            value={filters.brandId ?? ''}
+            onChange={(v) => set({ brandId: v || undefined })}
+            all="All brands"
+            options={(options?.brands ?? []).map((o) => ({ value: o.id, label: `${o.name} (${o.count})` }))}
+          />
+        )}
+        <Picker
+          label="Complexity"
+          value={filters.complexity ?? ''}
+          onChange={(v) => set({ complexity: (v || undefined) as ClientProjectFilters['complexity'] })}
+          all="Any complexity"
+          options={(options?.complexities ?? []).map((o) => ({
+            value: o.value,
+            label: `${o.value.charAt(0) + o.value.slice(1).toLowerCase()} (${o.count} products)`,
+          }))}
+        />
+        <Picker
+          label="Revisions"
+          value={filters.paidRounds ?? ''}
+          onChange={(v) => set({ paidRounds: (v || undefined) as ClientProjectFilters['paidRounds'] })}
+          all="Any"
+          options={[
+            { value: 'with', label: 'Went past the included rounds' },
+            { value: 'without', label: 'Stayed within them' },
+          ]}
+        />
+
+        <label className="text-dense">
+          <span className="text-ink-muted mb-1 block text-micro">Delivered between</span>
+          <span className="flex items-center gap-1.5">
+            <input
+              type="date"
+              data-slot="input"
+              value={filters.from ?? ''}
+              onChange={(e) => set({ from: e.target.value || undefined })}
+              className="border-control bg-surface rounded-md border px-2 py-1 text-dense"
+            />
+            <span className="text-ink-muted text-micro">and</span>
+            <input
+              type="date"
+              data-slot="input"
+              value={filters.to ?? ''}
+              onChange={(e) => set({ to: e.target.value || undefined })}
+              className="border-control bg-surface rounded-md border px-2 py-1 text-dense"
+            />
+          </span>
+        </label>
+
+        {active > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilters({})}
+            className="text-ink-muted hover:text-ink ml-auto text-micro underline decoration-dotted underline-offset-2"
+          >
+            Clear {active} {active === 1 ? 'filter' : 'filters'}
+          </button>
+        )}
+      </section>
 
       <div className="border-rule bg-surface shadow-card overflow-x-auto rounded-xl border">
         <table className="w-full border-collapse text-dense">
@@ -139,7 +211,7 @@ export function ClientProjectsScreen() {
               <tr className="border-rule-strong bg-wash/70 border-t font-medium">
                 <Td colSpan={7}>
                   {projects.length} {projects.length === 1 ? 'project' : 'projects'}
-                  {brandId && ' (filtered)'}
+                  {active > 0 && ' matching these filters'}
                 </Td>
                 <Td align="right" className="tabular whitespace-nowrap">
                   {formatMoneyMinor(
@@ -192,5 +264,40 @@ function Td({
     >
       {children}
     </td>
+  )
+}
+
+/** One labelled dropdown. Same shape for every filter, so the row reads as a row. */
+function Picker({
+  label,
+  value,
+  onChange,
+  all,
+  options,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  all: string
+  options: { value: string; label: string }[]
+}) {
+  if (options.length === 0) return null
+  return (
+    <label className="text-dense">
+      <span className="text-ink-muted mb-1 block text-micro">{label}</span>
+      <select
+        data-slot="control"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="border-control bg-surface rounded-md border px-2 py-1 text-dense"
+      >
+        <option value="">{all}</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }

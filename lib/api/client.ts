@@ -669,8 +669,35 @@ export const getClientActivity = (params: { take?: number } = {}) =>
 export const markActivitySeen = () =>
   apiFetch<{ seen: boolean }>('/client/activity/seen', { method: 'POST' })
 
-export const getClientProjects = (params: { brandId?: string; serviceId?: string } = {}) =>
-  apiFetch<{ canSeeMoney: boolean; projects: ClientProject[] }>(`/client/projects${qs(params)}`)
+export type ClientProjectFilters = {
+  brandId?: string
+  serviceId?: string
+  complexity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'STANDALONE'
+  paidRounds?: 'with' | 'without'
+  from?: string
+  to?: string
+}
+
+/**
+ * What can be filtered by, counted across the client's whole scope.
+ *
+ * Counted over everything rather than the filtered set, so choosing a service
+ * does not empty the list of every other service and leave no way back. The
+ * counts also answer "how many A+ projects have we had" before anything is
+ * selected.
+ */
+export type ClientFilterOptions = {
+  services: { id: string; name: string; count: number }[]
+  brands: { id: string; name: string; count: number }[]
+  complexities: { value: string; count: number }[]
+}
+
+export const getClientProjects = (params: ClientProjectFilters = {}) =>
+  apiFetch<{
+    canSeeMoney: boolean
+    filters: ClientFilterOptions
+    projects: ClientProject[]
+  }>(`/client/projects${qs(params)}`)
 
 export type ClientProjectDetail = {
   canSeeMoney: boolean
