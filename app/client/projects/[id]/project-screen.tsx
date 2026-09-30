@@ -75,16 +75,17 @@ export function ClientProjectScreen({ id }: { id: string }) {
   /*
    * Every event, in date order.
    *
-   * Sorted rather than assembled in a fixed sequence, because a delivery can be
-   * entered after the day it shipped — backdating is allowed (§5.1) — and a
-   * timeline that always printed "logged" first would show a job recorded on
-   * the 29th above one delivered on the 20th and call it a sequence.
+   * Sorted rather than assembled in a fixed sequence, because a round can be
+   * requested on any date (§5.1) and a timeline that printed the job's own date
+   * first would show a round dated before it and call that a sequence.
    *
-   * "Recorded", not "logged by your project manager": on a backdated entry the
-   * first phrase is true and the second implies the work started then.
+   * "Created on", not "Delivered": that is the name §5.1 gave `deliveredOn`
+   * when the cap came off it, and the client panel is the last screen still
+   * using the old word for it. The date the PM typed it in (`loggedOn`) was a
+   * second row here until 2026-09-30 (owner) — two dates for one job, one of
+   * them an internal bookkeeping fact the client has no use for.
    */
   const events = [
-    { key: 'logged', date: p.loggedOn, label: 'Recorded' as const, badge: undefined, emphasis: false },
     ...allRounds.map((r) => ({
       key: `r-${r.variationNumber}-${r.roundNumber}`,
       date: r.requestedOn,
@@ -92,8 +93,15 @@ export function ClientProjectScreen({ id }: { id: string }) {
       badge: (r.included ? 'included' : 'charged') as 'included' | 'charged',
       emphasis: false,
     })),
-    { key: 'delivered', date: p.deliveredOn, label: 'Delivered' as const, badge: undefined, emphasis: true },
-  ].sort((a, b) => a.date.localeCompare(b.date) || (a.key === 'delivered' ? 1 : -1))
+    { key: 'delivered', date: p.deliveredOn, label: 'Created on' as const, badge: undefined, emphasis: true },
+    // On a shared date the job's own row leads: it is the thing the rounds are
+    // rounds *on*. It used to sort last, when it read "Delivered" and meant the
+    // culmination rather than the origin.
+  ].sort(
+    (a, b) =>
+      a.date.localeCompare(b.date) ||
+      Number(a.key !== 'delivered') - Number(b.key !== 'delivered'),
+  )
 
   return (
     <div className="space-y-8">
@@ -122,7 +130,7 @@ export function ClientProjectScreen({ id }: { id: string }) {
         without these the page was a heading and a charge (owner, 2026-09-29).
       */}
       <section className="border-rule divide-rule flex flex-wrap divide-x border-y py-4">
-        <Fact label="Delivered" value={formatDateOnly(p.deliveredOn)} />
+        <Fact label="Created on" value={formatDateOnly(p.deliveredOn)} />
         <Fact label="Service" value={p.serviceName} />
         <Fact
           label="Variations"

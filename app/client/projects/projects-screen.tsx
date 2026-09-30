@@ -101,7 +101,7 @@ export function ClientProjectsScreen() {
         />
 
         <label className="text-dense">
-          <span className="text-ink-muted mb-1 block text-micro">Delivered between</span>
+          <span className="text-ink-muted mb-1 block text-micro">Created between</span>
           <span className="flex items-center gap-1.5">
             <input
               type="date"
@@ -157,7 +157,7 @@ export function ClientProjectsScreen() {
               <Th>Complexity</Th>
               <Th>Extra products</Th>
               <Th>Revision rounds</Th>
-              <Th>Delivered</Th>
+              <Th>Created on</Th>
               {money && <Th align="right">Amount</Th>}
             </tr>
           </thead>
