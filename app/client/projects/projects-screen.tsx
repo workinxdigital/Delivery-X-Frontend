@@ -86,7 +86,7 @@ export function ClientProjectsScreen() {
           all="Any complexity"
           options={(options?.complexities ?? []).map((o) => ({
             value: o.value,
-            label: `${o.value.charAt(0) + o.value.slice(1).toLowerCase()} (${o.count} products)`,
+            label: `${o.value.charAt(0) + o.value.slice(1).toLowerCase()} (${o.count} ${o.count === 1 ? 'product' : 'products'})`,
           }))}
         />
         <Picker
@@ -187,9 +187,11 @@ export function ClientProjectsScreen() {
                     term they agreed, where "beyond allowance" is ours. The
                     number that costs them money is the one called out.
                   */}
-                  {p.paidRounds > 0
-                    ? <span className="text-beyond ml-1.5 text-micro">{p.paidRounds} charged</span>
-                    : <span className="text-ink-faint ml-1.5 text-micro">of {p.includedRounds} included</span>}
+                  {p.paidRounds > 0 ? (
+                    <span className="text-beyond ml-1.5 text-micro">{p.paidRounds} charged</span>
+                  ) : (
+                    <span className="text-ink-faint ml-1.5 text-micro">of {p.includedRounds} included</span>
+                  )}
                 </Td>
                 <Td className="text-ink-muted whitespace-nowrap">{formatDateOnly(p.deliveredOn)}</Td>
                 {money && (
@@ -285,19 +287,38 @@ function Picker({
   return (
     <label className="text-dense">
       <span className="text-ink-muted mb-1 block text-micro">{label}</span>
-      <select
-        data-slot="control"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="border-control bg-surface rounded-md border px-2 py-1 text-dense"
-      >
-        <option value="">{all}</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      {/*
+        The native arrow is drawn by the platform at the element's right edge,
+        outside the padding — so on a bordered, rounded control it sits on the
+        border rather than inside it. `appearance-none` removes it and the
+        chevron below is ours, positioned within the box and inert to clicks so
+        the whole control still opens the menu.
+      */}
+      <span className="relative block">
+        <select
+          data-slot="control"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="border-control bg-surface w-full appearance-none rounded-md border py-1 pr-8 pl-2.5 text-dense"
+        >
+          <option value="">{all}</option>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="text-ink-muted pointer-events-none absolute top-1/2 right-2.5 h-3.5 w-3.5 -translate-y-1/2"
+        >
+          <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
     </label>
   )
 }
