@@ -169,7 +169,12 @@ export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agen
         </form>
       ) : (
         <div className="mb-3">
-          <GhostButton onClick={() => setAdding(true)}>Add a client login</GhostButton>
+          {/* Outlined: it is the only action in the panel, so it has nothing
+              to be read against and was landing as a heading (§ affordance,
+              2026-09-30). */}
+          <GhostButton outlined onClick={() => setAdding(true)}>
+            Add a client login
+          </GhostButton>
         </div>
       )}
 

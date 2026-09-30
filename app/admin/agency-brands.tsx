@@ -188,7 +188,10 @@ export function AgencyBrands({ agencyId, agencyName }: { agencyId: string; agenc
                       placeholder="Pick the correct brand"
                     />
                     </span>
-                    <GhostButton disabled={!target} onClick={() => setConfirming(true)}>
+                    {/* The committing action beside a picker, so it carries an
+                        outline; Cancel next to it stays plain, which is the
+                        distinction. */}
+                    <GhostButton outlined disabled={!target} onClick={() => setConfirming(true)}>
                       Merge
                     </GhostButton>
                     <GhostButton
