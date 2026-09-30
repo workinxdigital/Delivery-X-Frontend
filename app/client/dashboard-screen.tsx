@@ -225,23 +225,6 @@ export function ClientDashboardScreen() {
         </section>
       )}
 
-      {data.canSeeMoney && data.entries.length > 0 && (
-        <section>
-          <h2 className="display mb-3 text-[1.0625rem] font-semibold">Recent account activity</h2>
-          <ul className="border-rule bg-surface divide-rule shadow-card divide-y overflow-hidden rounded-xl border">
-            {data.entries.map((e) => (
-              <li key={e.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3">
-                <span className="min-w-0 grow truncate">{e.description}</span>
-                {e.disputed && <Pill tone="beyond">flagged</Pill>}
-                <span className="text-ink-muted text-micro">{formatDateOnly(e.occurredOn)}</span>
-                <span className={cn('tabular w-28 text-right', e.amountMinor > 0 ? 'text-ink' : 'text-ink-muted')}>
-                  {formatMoneyMinor(e.amountMinor)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </div>
   )
 }

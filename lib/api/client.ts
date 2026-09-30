@@ -626,7 +626,6 @@ export type ClientDashboard = {
   | {
       canSeeMoney: true
       balance: ClientBalance
-      entries: ClientLedgerEntry[]
       credits: ClientLedgerEntry[]
       breakdown: ConsumptionBreakdown
     }
@@ -650,6 +649,25 @@ export type ClientProject = {
 }
 
 export const getClientDashboard = () => apiFetch<ClientDashboard>('/client/dashboard')
+
+/**
+ * The account's activity (§4.4) — every entry, newest first.
+ *
+ * Separate from the dashboard because a feed grows forever and a dashboard
+ * should not. `isNew` is per-viewer, from one timestamp on the person rather
+ * than a read-receipt per entry.
+ */
+export type ClientActivity = {
+  entries: (ClientLedgerEntry & { isNew: boolean })[]
+  balance: ClientBalance
+  unread: number
+}
+
+export const getClientActivity = (params: { take?: number } = {}) =>
+  apiFetch<ClientActivity>(`/client/activity${qs(params)}`)
+
+export const markActivitySeen = () =>
+  apiFetch<{ seen: boolean }>('/client/activity/seen', { method: 'POST' })
 
 export const getClientProjects = (params: { brandId?: string; serviceId?: string } = {}) =>
   apiFetch<{ canSeeMoney: boolean; projects: ClientProject[] }>(`/client/projects${qs(params)}`)

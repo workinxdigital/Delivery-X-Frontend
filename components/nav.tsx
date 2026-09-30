@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { ClientActivityBell } from '@/components/client-activity-bell'
 import { NotificationCentre } from '@/components/notification-centre'
 import { homeFor, isAdmin, isClient, useSession } from '@/components/session'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -124,6 +125,8 @@ export function Nav() {
                 this only avoids rendering a bell that would answer 403.
               */}
               {isAdmin(user) && <NotificationCentre />}
+              {/* A client's counterpart: their own account activity (§4.4). */}
+              {client && <ClientActivityBell />}
 
               {/*
                 One capsule, not a name with the role stacked underneath it.
