@@ -158,8 +158,12 @@ export function AgencyLedger({ agencyId, agencyName, billingMode }: {
         </form>
       ) : (
         <div className="mb-3 flex gap-2">
-          <GhostButton onClick={() => setAdding('DEPOSIT_CREDIT')}>Record a deposit</GhostButton>
-          <GhostButton onClick={() => setAdding('ADJUSTMENT')}>Post an adjustment</GhostButton>
+          <GhostButton outlined onClick={() => setAdding('DEPOSIT_CREDIT')}>
+            Record a deposit
+          </GhostButton>
+          <GhostButton outlined onClick={() => setAdding('ADJUSTMENT')}>
+            Post an adjustment
+          </GhostButton>
         </div>
       )}
 

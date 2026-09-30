@@ -102,6 +102,7 @@ export function GhostButton({
   disabled,
   title,
   type = 'button',
+  outlined,
   className,
 }: {
   children: React.ReactNode
@@ -110,6 +111,17 @@ export function GhostButton({
   disabled?: boolean
   title?: string
   type?: 'button' | 'submit'
+  /**
+   * Draw a border.
+   *
+   * A ghost button is text with a hover state, which reads as a control when it
+   * sits in a strip of them — the row actions on the Agencies table say
+   * "Brands Clients Money Rates Delete" and nobody mistakes those for labels.
+   * On its own in a panel it has nothing to be read against, and "Record a
+   * deposit" looked like a heading (owner, 2026-09-30). An outline is the
+   * cheapest thing that says "this is a thing you press".
+   */
+  outlined?: boolean
   className?: string
 }) {
   return (
@@ -120,6 +132,7 @@ export function GhostButton({
       title={title}
       className={cn(
         'text-micro rounded-md px-2 py-1 transition-colors duration-[120ms] disabled:cursor-not-allowed disabled:opacity-40',
+        outlined && 'border-control border px-2.5',
         danger
           ? 'text-ink-muted hover:text-danger hover:bg-wash'
           : 'text-ink-muted hover:text-ink hover:bg-wash',

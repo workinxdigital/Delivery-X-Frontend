@@ -81,7 +81,11 @@ export function AgencyPayment({ agencyId, agencyName }: { agencyId: string; agen
               : 'Loading'}
           </p>
         </div>
-        {!open && <GhostButton onClick={() => setOpen(true)}>Record a payment</GhostButton>}
+        {!open && (
+          <GhostButton outlined onClick={() => setOpen(true)}>
+            Record a payment
+          </GhostButton>
+        )}
       </div>
 
       {open && (
