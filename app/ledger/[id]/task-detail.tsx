@@ -697,6 +697,12 @@ function VariationBlock({
       setErrors({})
       void queryClient.invalidateQueries({ queryKey: ['task', taskId] })
       void queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      /* A round past the allowance is charged, so the breakdown beside this is
+         now wrong. It keys off ['admin','pricing',…], which neither key above
+         is a prefix of, so the card went on showing the pre-round total until
+         the page was reloaded — understating the money on the one panel whose
+         job is to explain it. */
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'pricing'] })
     },
     onError: (err) => {
       if (err instanceof ApiError && err.issues.length > 0) {

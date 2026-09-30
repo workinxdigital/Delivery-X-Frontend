@@ -122,6 +122,10 @@ export function EditTask({
       void queryClient.invalidateQueries({ queryKey: ['task', task.id] })
       void queryClient.invalidateQueries({ queryKey: ['tasks'] })
       void queryClient.invalidateQueries({ queryKey: ['history', task.id] })
+      /* An edit can move the tier, the service or the agency, each of which
+         re-prices the delivery — and the breakdown keys off ['admin','pricing',…],
+         which none of the keys above is a prefix of. */
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'pricing'] })
       onDone()
     },
     onError: (err) => {
