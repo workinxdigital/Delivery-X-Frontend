@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { CodePill, ComplexityPill, Pill } from '@/components/pill'
-import { flagCharge, getClientProject } from '@/lib/api/client'
+import { flagCharge, getClientProject, type ChargeDetail } from '@/lib/api/client'
 import { formatDateOnly, formatMoneyMinor } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -251,6 +251,14 @@ export function ClientProjectScreen({ id }: { id: string }) {
                   )
                 )}
 
+                {/*
+                  The arithmetic, frozen when the charge was made (§6.3). A
+                  total a client cannot take apart is a total they cannot check,
+                  and the rate is shown rather than only the result — an amount
+                  that cannot be reconciled is one nobody can defend.
+                */}
+                <ChargeWorking detail={c.detail} totalMinor={c.amountMinor} />
+
                 {c.disputed && c.disputeNote && (
                   <p className="text-ink-muted mt-2 text-micro">You said: {c.disputeNote}</p>
                 )}
@@ -296,5 +304,63 @@ function Event({
       <span className={cn('min-w-0 grow', emphasis && 'font-medium')}>{label}</span>
       {badge && (badge === 'included' ? <Pill tone="outline">included</Pill> : <Pill tone="beyond">charged</Pill>)}
     </li>
+  )
+}
+
+/**
+ * How one charge was arrived at.
+ *
+ * Renders nothing for entries that have no working — a deposit, an adjustment,
+ * a reversal — and for anything charged before this was recorded, which is the
+ * honest outcome: an absent breakdown is better than an invented one.
+ */
+function ChargeWorking({ detail, totalMinor }: { detail: ChargeDetail | null; totalMinor: number }) {
+  if (!detail) return null
+
+  if (detail.kind === 'ROUND') {
+    return (
+      <p className="text-ink-muted mt-2 text-micro">
+        Round {detail.roundNumber} of this project — the first {detail.includedRounds} are included,
+        so this one is charged at {formatMoneyMinor(detail.rateMinor)}
+        {detail.complexity ? ` for a ${detail.complexity.toLowerCase()} product` : ''}.
+      </p>
+    )
+  }
+
+  return (
+    <div className="border-rule bg-wash/40 mt-3 overflow-hidden rounded-md border">
+      <table className="w-full border-collapse text-micro">
+        <thead>
+          <tr className="border-rule text-ink-muted border-b text-left">
+            <th className="px-3 py-1.5 font-medium">Product</th>
+            <th className="px-3 py-1.5 font-medium">Complexity</th>
+            <th className="px-3 py-1.5 text-right font-medium">Rate</th>
+            <th className="px-3 py-1.5 text-right font-medium">Amount</th>
+          </tr>
+        </thead>
+        <tbody className="divide-rule divide-y">
+          {detail.lines.map((l, i) => (
+            <tr key={`${l.label}-${i}`}>
+              <td className="px-3 py-1.5">{l.label}</td>
+              <td className="px-3 py-1.5">
+                {l.complexity ? <ComplexityPill complexity={l.complexity as never} /> : <span className="text-ink-faint">—</span>}
+              </td>
+              <td className="tabular px-3 py-1.5 text-right">
+                {l.priced ? formatMoneyMinor(l.rateMinor ?? 0) : <span className="text-ink-faint">not priced</span>}
+              </td>
+              <td className="tabular px-3 py-1.5 text-right">
+                {l.priced ? formatMoneyMinor(l.amountMinor) : <span className="text-ink-faint">—</span>}
+              </td>
+            </tr>
+          ))}
+          <tr className="bg-wash/60 font-medium">
+            <td className="px-3 py-1.5" colSpan={3}>
+              {detail.serviceName} total
+            </td>
+            <td className="tabular px-3 py-1.5 text-right">{formatMoneyMinor(Math.abs(totalMinor))}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   )
 }

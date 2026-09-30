@@ -127,6 +127,104 @@ export function ClientDashboardScreen() {
         )}
       </section>
 
+      {data.canSeeMoney && (
+        <section className="grid gap-6 lg:grid-cols-2">
+          {/*
+            Money in, itemised. "Paid in $15,200" is a figure a client has to
+            take on trust; the deposits behind it are what they reconcile
+            against their own records.
+          */}
+          <div>
+            <h2 className="display mb-3 text-[1.0625rem] font-semibold">What you have paid in</h2>
+            {data.credits.length === 0 ? (
+              <p className="text-ink-muted border-rule bg-surface rounded-xl border p-5 text-dense">
+                No deposits recorded. This account is billed in arrears.
+              </p>
+            ) : (
+              <ul className="border-rule bg-surface divide-rule shadow-card divide-y overflow-hidden rounded-xl border">
+                {data.credits.map((c) => (
+                  <li key={c.id} className="flex items-center gap-4 px-5 py-3">
+                    <span className="min-w-0 grow truncate">{c.description}</span>
+                    <span className="text-ink-muted shrink-0 text-micro">{formatDateOnly(c.occurredOn)}</span>
+                    <span className="tabular w-28 shrink-0 text-right font-medium">
+                      {formatMoneyMinor(c.amountMinor)}
+                    </span>
+                  </li>
+                ))}
+                <li className="bg-wash/60 flex items-center gap-4 px-5 py-3 font-medium">
+                  <span className="grow">Total paid in</span>
+                  <span className="tabular w-28 text-right">
+                    {formatMoneyMinor(data.balance.creditedMinor)}
+                  </span>
+                </li>
+              </ul>
+            )}
+          </div>
+
+          {/*
+            And where it went. "You have spent $4,850" answers nothing; by brand
+            and by service are the two ways a client actually asks. Both are
+            built from the same entries as the balance, so the parts always sum
+            to the whole.
+          */}
+          <div>
+            <h2 className="display mb-3 text-[1.0625rem] font-semibold">Where it has gone</h2>
+            <div className="border-rule bg-surface shadow-card overflow-hidden rounded-xl border">
+              {data.breakdown.byBrand.length === 0 ? (
+                <p className="text-ink-muted p-5 text-dense">Nothing consumed yet.</p>
+              ) : (
+                <table className="w-full border-collapse text-dense">
+                  <thead>
+                    <tr className="border-rule bg-wash/70 text-ink-muted border-b text-left text-micro uppercase tracking-wide">
+                      <th className="px-5 py-2 font-medium">Brand</th>
+                      <th className="px-3 py-2 text-right font-medium">Projects</th>
+                      <th className="px-3 py-2 text-right font-medium">Extra rounds</th>
+                      <th className="px-5 py-2 text-right font-medium">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-rule divide-y">
+                    {data.breakdown.byBrand.map((b) => (
+                      <tr key={b.name}>
+                        <td className="px-5 py-2.5 font-medium">
+                          {b.name}
+                          <span className="text-ink-muted ml-1.5 text-micro">
+                            {b.projects} {b.projects === 1 ? 'project' : 'projects'}
+                          </span>
+                        </td>
+                        <td className="tabular px-3 py-2.5 text-right">{formatMoneyMinor(b.projectsMinor)}</td>
+                        <td className="tabular px-3 py-2.5 text-right">
+                          {b.roundsMinor === 0 ? <span className="text-ink-faint">—</span> : formatMoneyMinor(b.roundsMinor)}
+                        </td>
+                        <td className="tabular px-5 py-2.5 text-right font-medium">{formatMoneyMinor(b.totalMinor)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {data.breakdown.byService.length > 0 && (
+              <div className="border-rule bg-surface shadow-card mt-4 overflow-hidden rounded-xl border">
+                <p className="border-rule text-ink-muted border-b px-5 py-2 text-micro uppercase tracking-wide">
+                  By service
+                </p>
+                <ul className="divide-rule divide-y">
+                  {data.breakdown.byService.map((sv) => (
+                    <li key={sv.name} className="flex items-center gap-4 px-5 py-2.5">
+                      <span className="min-w-0 grow truncate">{sv.name}</span>
+                      <span className="text-ink-muted shrink-0 text-micro">
+                        {sv.count} {sv.count === 1 ? 'project' : 'projects'}
+                      </span>
+                      <span className="tabular w-24 shrink-0 text-right">{formatMoneyMinor(sv.amountMinor)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {data.canSeeMoney && data.entries.length > 0 && (
         <section>
           <h2 className="display mb-3 text-[1.0625rem] font-semibold">Recent account activity</h2>

@@ -538,6 +538,33 @@ export const updateUser = (
  * server never fetched them. The types below say so, which keeps a component
  * from rendering `amountMinor ?? 0` and quietly inventing a figure.
  */
+/**
+ * How a charge was arrived at, frozen when it was made (§6.3).
+ *
+ * Never recomputed on the client: a breakdown derived from today's rate card
+ * would stop adding up to the amount beside it the first time a rate changed,
+ * and a breakdown that disagrees with its own total is worse than none.
+ */
+export type ChargeDetail =
+  | {
+      kind: 'DELIVERY'
+      serviceName: string
+      lines: {
+        label: string
+        complexity: string | null
+        rateMinor: number | null
+        amountMinor: number
+        priced: boolean
+      }[]
+    }
+  | {
+      kind: 'ROUND'
+      roundNumber: number
+      complexity: string | null
+      rateMinor: number
+      includedRounds: number
+    }
+
 export type ClientLedgerEntry = {
   id: string
   kind: 'DEPOSIT_CREDIT' | 'ADJUSTMENT' | 'PROJECT_CHARGE' | 'ROUND_CHARGE' | 'REVERSAL'
@@ -548,6 +575,18 @@ export type ClientLedgerEntry = {
   disputeNote: string | null
   brandName: string | null
   taskCode: string | null
+  detail: ChargeDetail | null
+}
+
+export type ConsumptionBreakdown = {
+  byBrand: {
+    name: string
+    projectsMinor: number
+    roundsMinor: number
+    projects: number
+    totalMinor: number
+  }[]
+  byService: { name: string; amountMinor: number; count: number }[]
 }
 
 export type ClientCounts = {
@@ -584,7 +623,13 @@ export type ClientDashboard = {
   recent: ClientRecent[]
 } & (
   | { canSeeMoney: false }
-  | { canSeeMoney: true; balance: ClientBalance; entries: ClientLedgerEntry[] }
+  | {
+      canSeeMoney: true
+      balance: ClientBalance
+      entries: ClientLedgerEntry[]
+      credits: ClientLedgerEntry[]
+      breakdown: ConsumptionBreakdown
+    }
 )
 
 export type ClientProject = {
