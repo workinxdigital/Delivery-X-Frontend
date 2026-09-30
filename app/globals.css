@@ -869,11 +869,13 @@ tbody tr {
   /* A hairline, not a border: the shadow does the separating, and an edge this
      light keeps the card soft the way the reference is. */
   border: 1px solid color-mix(in oklab, var(--rule) 55%, transparent) !important;
-  border-radius: 20px !important;
+  border-radius: 16px !important;
   box-shadow: var(--shadow-pop) !important;
-  padding: 0.85rem 1.1rem 0.85rem 0.85rem !important;
-  gap: 0.75rem !important;
-  min-width: 21rem;
+  /* Room on the right for the close button, which sits inside the padding
+     rather than over the text. */
+  padding: 0.7rem 2.25rem 0.7rem 0.7rem !important;
+  gap: 0.625rem !important;
+  min-width: 18.5rem;
   align-items: center !important;
   font-family: var(--font-sans);
   position: relative;
@@ -893,8 +895,8 @@ tbody tr {
   /* !important throughout: Sonner ships its own [data-sonner-toast] [data-icon]
      rule at equal specificity, and which one wins is decided by load order —
      which is not something to leave to chance. */
-  width: 2.125rem !important;
-  height: 2.125rem !important;
+  width: 1.75rem !important;
+  height: 1.75rem !important;
   flex: none !important;
   margin: 0 !important;
   border-radius: 999px !important;
@@ -903,8 +905,8 @@ tbody tr {
 }
 
 .cn-toast [data-icon] svg {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 /* Failure: the badge goes red and the glyph goes light, so it reads at a glance
@@ -922,12 +924,12 @@ tbody tr {
 .cn-toast:not([data-type])::before,
 .cn-toast[data-type='default']::before {
   content: '';
-  width: 2.125rem;
-  height: 2.125rem;
+  width: 1.75rem;
+  height: 1.75rem;
   flex: none;
   border-radius: 999px;
   background: var(--lime);
-  box-shadow: inset 0 0 0 0.5rem color-mix(in oklab, var(--surface) 82%, transparent);
+  box-shadow: inset 0 0 0 0.4rem color-mix(in oklab, var(--surface) 82%, transparent);
 }
 
 .cn-toast [data-content] {
@@ -938,7 +940,7 @@ tbody tr {
 
 .cn-toast [data-title] {
   font-family: var(--font-display);
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: -0.005em;
   line-height: 1.25;
@@ -946,9 +948,49 @@ tbody tr {
 }
 
 .cn-toast [data-description] {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   line-height: 1.4;
   color: var(--ink-muted) !important;
+}
+
+/*
+ * The close button.
+ *
+ * Sonner's own rule pins it to the top-LEFT corner with `position: absolute`,
+ * which on a card this round lands it on the radius and, worse, on top of the
+ * badge. It is moved to the right edge instead, vertically centred, inside the
+ * padding reserved for it above.
+ *
+ * Always visible, not on hover: a control that only exists once you have
+ * guessed it is there is one most people never find, and on a touch screen
+ * there is no hover to reveal it with.
+ */
+.cn-toast [data-close-button] {
+  position: absolute !important;
+  top: 50% !important;
+  right: 0.55rem !important;
+  left: auto !important;
+  transform: translateY(-50%) !important;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  border-radius: 999px !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--ink-faint) !important;
+  opacity: 1 !important;
+  transition:
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.cn-toast [data-close-button]:hover {
+  background: var(--wash) !important;
+  color: var(--ink) !important;
+}
+
+.cn-toast [data-close-button] svg {
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 /*

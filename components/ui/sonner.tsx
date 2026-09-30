@@ -46,6 +46,13 @@ const Toaster = ({ ...props }: ToasterProps) => {
       // Long enough to read a generated task code and look away (§5.1).
       duration={5000}
       gap={10}
+      /* A cross, so a toast can be dismissed rather than waited out. The
+         timer still runs — this is for the case where you have read it and
+         want the corner back, usually because a second one is queued behind
+         it. Styled in globals.css to sit inside the card's own padding
+         rather than at Sonner's default top-left corner, which on a card
+         this round lands on the radius. */
+      closeButton
       toastOptions={{
         classNames: {
           toast: "cn-toast",
