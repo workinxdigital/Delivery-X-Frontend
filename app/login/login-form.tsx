@@ -50,7 +50,19 @@ export function LoginForm() {
     onSuccess: (user) => {
       // Seed the cache so the next screen does not flicker through its
       // unauthenticated state before the session query resolves.
+      /*
+       * Seed, then re-read.
+       *
+       * Seeding stops the next screen flickering through its signed-out state.
+       * But the login response is a different endpoint from /auth/me, and when
+       * the two drifted — login omitted `mustChangePassword` — the seeded copy
+       * was missing the field that decides whether the password wall shows, so
+       * a temporary password sailed past it into a dashboard the server was
+       * refusing. Invalidating makes /auth/me the authority a moment later,
+       * whatever login happened to return.
+       */
       queryClient.setQueryData(['me'], user)
+      void queryClient.invalidateQueries({ queryKey: ['me'] })
       /*
        * Where you land depends on who you are (§6.4).
        *
