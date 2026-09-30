@@ -314,7 +314,14 @@ export type HistoryEntry = {
 /** Three roles since 2026-09-29: the client panel added a read-only outsider. */
 export type Role = 'ADMIN' | 'PM' | 'CLIENT'
 
-export type SessionUser = { id: string; name: string; email: string; role: Role }
+export type SessionUser = {
+  id: string
+  name: string
+  email: string
+  role: Role
+  /** Set on an admin-issued password; nothing else works until it is changed. */
+  mustChangePassword?: boolean
+}
 
 /** Admin views carry usage counts, so master data is never deleted blind. */
 export type AdminAgency = {

@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { CodePill, Pill } from '@/components/pill'
-import { getClientActivity, type ClientLedgerEntry } from '@/lib/api/client'
+import { clientActivityCsvUrl, getClientActivity, type ClientLedgerEntry } from '@/lib/api/client'
 import { formatDateOnly, formatMoneyMinor } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -54,11 +54,20 @@ export function ClientActivityScreen() {
             Everything paid in and everything charged, newest first.
           </p>
         </div>
-        <div className="text-right">
+        <div className="flex items-end gap-4">
+          <a
+            href={clientActivityCsvUrl()}
+            download
+            className="border-control hover:bg-wash rounded-md border px-2.5 py-1 text-micro transition-colors"
+          >
+            Download CSV
+          </a>
+          <div className="text-right">
           <p className="text-ink-muted text-micro uppercase tracking-wide">Available</p>
           <p className={cn('display tabular text-[1.5rem] leading-none font-semibold', data.balance.availableMinor < 0 && 'text-beyond')}>
             {formatMoneyMinor(data.balance.availableMinor)}
           </p>
+          </div>
         </div>
       </header>
 

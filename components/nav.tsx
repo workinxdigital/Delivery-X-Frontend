@@ -27,6 +27,8 @@ const STAFF_LINKS = [
 const CLIENT_LINKS = [
   { href: '/client', label: 'Overview' },
   { href: '/client/projects', label: 'Projects' },
+  { href: '/client/activity', label: 'Activity' },
+  { href: '/client/account', label: 'Access' },
 ]
 
 export function Nav() {

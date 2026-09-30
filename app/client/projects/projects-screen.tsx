@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useState } from 'react'
 import { CodePill, ComplexityPill } from '@/components/pill'
-import { getClientProjects, type ClientProjectFilters } from '@/lib/api/client'
+import { clientProjectsCsvUrl, getClientProjects, type ClientProjectFilters } from '@/lib/api/client'
 import { formatDateOnly, formatMoneyMinor } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -121,15 +121,26 @@ export function ClientProjectsScreen() {
           </span>
         </label>
 
-        {active > 0 && (
-          <button
-            type="button"
-            onClick={() => setFilters({})}
-            className="text-ink-muted hover:text-ink ml-auto text-micro underline decoration-dotted underline-offset-2"
+        <span className="ml-auto flex items-center gap-4">
+          {active > 0 && (
+            <button
+              type="button"
+              onClick={() => setFilters({})}
+              className="text-ink-muted hover:text-ink text-micro underline decoration-dotted underline-offset-2"
+            >
+              Clear {active} {active === 1 ? 'filter' : 'filters'}
+            </button>
+          )}
+          {/* The filters travel with the file, so what was downloaded matches
+              what was on screen (§8). */}
+          <a
+            href={clientProjectsCsvUrl(filters)}
+            download
+            className="border-control hover:bg-wash rounded-md border px-2.5 py-1 text-micro transition-colors"
           >
-            Clear {active} {active === 1 ? 'filter' : 'filters'}
-          </button>
-        )}
+            Download CSV
+          </a>
+        </span>
       </section>
 
       <div className="border-rule bg-surface shadow-card overflow-x-auto rounded-xl border">

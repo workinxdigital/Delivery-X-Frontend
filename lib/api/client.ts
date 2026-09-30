@@ -666,6 +666,40 @@ export type ClientActivity = {
 export const getClientActivity = (params: { take?: number } = {}) =>
   apiFetch<ClientActivity>(`/client/activity${qs(params)}`)
 
+/** Who at the client can sign in, and what each of them sees (§4.5). */
+export type ClientAccount = {
+  account: { name: string; billingMode: 'DEPOSIT' | 'POSTPAID'; includedRounds: number }
+  you: {
+    name: string
+    email: string
+    scope: 'ACCOUNT' | 'BRANDS'
+    brands: { id: string; name: string }[]
+  }
+  people: {
+    id: string
+    name: string
+    email: string
+    isYou: boolean
+    scope: 'ACCOUNT' | 'BRANDS'
+    brands: { id: string; name: string }[]
+  }[]
+}
+
+export const getClientAccount = () => apiFetch<ClientAccount>('/client/account')
+
+/**
+ * Export URLs, so the browser downloads them directly with the filters applied.
+ *
+ * The filters travel in the query because what a reader downloaded has to match
+ * what they were looking at — a file that disagrees with the screen is the
+ * fastest route to a phone call.
+ */
+export const clientProjectsCsvUrl = (filters: ClientProjectFilters = {}) =>
+  `${BASE_URL}/client/projects.csv${qs(filters)}`
+
+export const clientActivityCsvUrl = (range: { from?: string; to?: string } = {}) =>
+  `${BASE_URL}/client/activity.csv${qs(range)}`
+
 export const markActivitySeen = () =>
   apiFetch<{ seen: boolean }>('/client/activity/seen', { method: 'POST' })
 

@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect } from 'react'
+import { MustChangePassword } from '@/components/must-change-password'
 import { ApiError, getMe } from '@/lib/api/client'
 import type { SessionUser } from '@/lib/api/types'
 
@@ -99,6 +100,22 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       predicate: (query) => !PUBLIC_QUERY_KEYS.includes(String(query.queryKey[0])),
     })
   }, [unauthenticated, queryClient])
+
+  /*
+   * An account still carrying its issued password sees one screen (§7).
+   *
+   * Rendered in place of the app rather than redirected to: a redirect is a
+   * suggestion, and the screen behind it has already asked for data while the
+   * browser decides. The server refuses everything but the change itself, so
+   * this is about showing a form instead of a page of errors.
+   */
+  if (user?.mustChangePassword && pathname !== '/login') {
+    return (
+      <SessionContext.Provider value={{ user, loading: false }}>
+        <MustChangePassword />
+      </SessionContext.Provider>
+    )
+  }
 
   return (
     <SessionContext.Provider value={{ user, loading: isLoading }}>
