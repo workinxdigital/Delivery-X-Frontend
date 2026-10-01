@@ -4,9 +4,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { CodePill, Pill } from '@/components/pill'
 import { Input } from '@/components/ui/input'
-import { getDisputes, resolveDispute } from '@/lib/api/client'
+import { getDisputes, hideDispute, resolveDispute } from '@/lib/api/client'
 import { formatDateOnly, formatMoneyMinor, formatTimestamp } from '@/lib/format'
 import { GhostButton, PanelHeader, PrimaryButton } from './panel-parts'
 
@@ -27,10 +28,24 @@ export function DisputesPanel() {
   const queryClient = useQueryClient()
   const [acting, setActing] = useState<{ id: string; action: 'DISMISS' | 'CREDIT' } | null>(null)
   const [reason, setReason] = useState('')
+  /** Which row is being cleared off this list without an answer. */
+  const [clearing, setClearing] = useState<string | null>(null)
 
   const { data: disputes = [], isLoading } = useQuery({
     queryKey: ['admin', 'disputes'],
     queryFn: getDisputes,
+  })
+
+  const clear = useMutation({
+    mutationFn: (id: string) => hideDispute(id),
+    onSuccess: () => {
+      toast('Cleared from this list', {
+        description: 'The query stays open on the client\u2019s side — nothing was answered.',
+      })
+      setClearing(null)
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'disputes'] })
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not clear it'),
   })
 
   const resolve = useMutation({
@@ -97,9 +112,14 @@ export function DisputesPanel() {
                 onSubmit={(e) => { e.preventDefault(); resolve.mutate() }}
               >
                 <label className="text-ink-muted block text-micro" htmlFor={`reason-${d.id}`}>
+                  {/* The client reads this (owner, 2026-10-01). It used to say the
+                      opposite — written when the reason reached the audit log and
+                      nowhere else — and an admin typing a note they believe is
+                      private into a box the client will read is the worst version
+                      of this screen. */}
                   {acting.action === 'CREDIT'
-                    ? 'Why is this being credited? The client does not see this, but the audit log keeps it.'
-                    : 'Why is the charge standing? Recorded for whoever reads this later.'}
+                    ? 'Why is this being credited? The client sees this on their query.'
+                    : 'Why is the charge standing? The client sees this on their query.'}
                 </label>
                 <Input
                   id={`reason-${d.id}`}
@@ -120,18 +140,49 @@ export function DisputesPanel() {
                 </div>
               </form>
             ) : (
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <GhostButton onClick={() => { setActing({ id: d.id, action: 'CREDIT' }); setReason('') }}>
                   Credit it back
                 </GhostButton>
                 <GhostButton onClick={() => { setActing({ id: d.id, action: 'DISMISS' }); setReason('') }}>
                   Charge stands
                 </GhostButton>
+                {/*
+                  Clearing the queue is not answering (owner, 2026-10-01). It
+                  takes the row off this list and leaves the query open on the
+                  client's, so it sits apart from the two that decide something
+                  and says what it does rather than reading as a third verdict.
+                */}
+                <button
+                  type="button"
+                  onClick={() => setClearing(d.id)}
+                  className="text-ink-faint hover:text-ink ml-auto text-micro underline decoration-dotted underline-offset-2"
+                >
+                  Clear from this list
+                </button>
               </div>
             )}
           </li>
         ))}
       </ul>
+
+      {/*
+        The same dialog every other removal uses (§5.5), and for the same
+        reason: it names what actually happens. "Clear" reads like "delete",
+        and this one deletes nothing.
+      */}
+      {clearing && (
+        <ConfirmDialog
+          title="Clear this query from the list?"
+          description="It comes off this queue without being answered."
+          consequence="The client keeps seeing their query, and nothing about the charge changes."
+          confirmLabel="Clear it"
+          pendingLabel="Clearing"
+          pending={clear.isPending}
+          onConfirm={() => clear.mutate(clearing)}
+          onCancel={() => setClearing(null)}
+        />
+      )}
     </div>
   )
 }

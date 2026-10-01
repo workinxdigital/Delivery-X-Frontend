@@ -684,6 +684,15 @@ export type ClientQueries = { queries: ClientQuery[]; open: number }
 /** Everything this account has queried, open and answered (owner, 2026-10-01). */
 export const getClientQueries = () => apiFetch<ClientQueries>('/client/queries')
 
+/**
+ * Take a query off this client's list.
+ *
+ * Hides it here and withdraws it if nobody has answered yet; the record and
+ * the admin's view survive either way.
+ */
+export const hideClientQuery = (id: string) =>
+  apiFetch<{ withdrawn: boolean }>(`/client/queries/${id}`, { method: 'DELETE' })
+
 /** Who at the client can sign in, and what each of them sees (§4.5). */
 export type ClientAccount = {
   account: { name: string; billingMode: 'DEPOSIT' | 'POSTPAID'; includedRounds: number }
@@ -879,3 +888,12 @@ export const resolveDispute = (id: string, action: 'DISMISS' | 'CREDIT', reason:
     method: 'POST',
     body: JSON.stringify({ action, reason }),
   })
+
+/**
+ * Clear a query off the admin queue without answering it.
+ *
+ * Not a resolution: the client goes on seeing their query and its state, so
+ * this only tidies a queue.
+ */
+export const hideDispute = (id: string) =>
+  apiFetch<{ hidden: true }>(`/admin/disputes/${id}`, { method: 'DELETE' })

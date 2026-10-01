@@ -1,10 +1,13 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { CodePill, Pill } from '@/components/pill'
 import { QueryThread } from '@/components/query-thread'
-import { getClientQueries, type ClientQuery } from '@/lib/api/client'
+import { getClientQueries, hideClientQuery, type ClientQuery } from '@/lib/api/client'
 import { formatDateOnly, formatMoneyMinor } from '@/lib/format'
 
 /**
@@ -21,6 +24,24 @@ import { formatDateOnly, formatMoneyMinor } from '@/lib/format'
  * which is why §6.5 keeps a charge beside its credit instead of rewriting it.
  */
 export function ClientQueriesScreen() {
+  const queryClient = useQueryClient()
+  /** Which query is being taken off this list. */
+  const [removing, setRemoving] = useState<ClientQuery | null>(null)
+
+  const remove = useMutation({
+    mutationFn: (id: string) => hideClientQuery(id),
+    onSuccess: (r) => {
+      toast(r.withdrawn ? 'Query withdrawn' : 'Removed from your list', {
+        description: r.withdrawn
+          ? 'Your project manager is no longer being asked about it.'
+          : 'The charge and its answer are still on the project.',
+      })
+      setRemoving(null)
+      void queryClient.invalidateQueries({ queryKey: ['client', 'queries'] })
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not remove it'),
+  })
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['client', 'queries'],
     queryFn: getClientQueries,
@@ -68,15 +89,39 @@ export function ClientQueriesScreen() {
       ) : (
         <ul className="border-rule bg-surface divide-rule shadow-card divide-y overflow-hidden rounded-xl border">
           {data.queries.map((q) => (
-            <QueryRow key={q.id} query={q} />
+            <QueryRow key={q.id} query={q} onRemove={() => setRemoving(q)} />
           ))}
         </ul>
+      )}
+
+      {/*
+        Removing is per side (owner, 2026-10-01). It clears this list and
+        nothing else — the charge, the answer and the record all stand. An
+        unanswered one is withdrawn as well, which is a real act and is said
+        plainly rather than being folded into the word "remove".
+      */}
+      {removing && (
+        <ConfirmDialog
+          title={
+            removing.disputeResponse ? 'Remove this from your list?' : 'Withdraw this query?'
+          }
+          description={
+            removing.disputeResponse
+              ? 'It comes off this list. The charge and the answer stay on the project.'
+              : 'Your project manager stops being asked about it. The charge is unchanged.'
+          }
+          confirmLabel={removing.disputeResponse ? 'Remove it' : 'Withdraw it'}
+          pendingLabel={removing.disputeResponse ? 'Removing' : 'Withdrawing'}
+          pending={remove.isPending}
+          onConfirm={() => remove.mutate(removing.id)}
+          onCancel={() => setRemoving(null)}
+        />
       )}
     </div>
   )
 }
 
-function QueryRow({ query: q }: { query: ClientQuery }) {
+function QueryRow({ query: q, onRemove }: { query: ClientQuery; onRemove: () => void }) {
   const answered = Boolean(q.disputeResponse)
 
   return (
@@ -107,6 +152,14 @@ function QueryRow({ query: q }: { query: ClientQuery }) {
         <span className="tabular text-ink-muted ml-auto text-dense">
           {formatMoneyMinor(q.amountMinor < 0 ? -q.amountMinor : q.amountMinor)}
         </span>
+
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-ink-faint hover:text-ink text-micro underline decoration-dotted underline-offset-2"
+        >
+          {q.disputeResponse ? 'Remove' : 'Withdraw'}
+        </button>
       </div>
 
       <p className="text-ink-faint mt-1 text-micro">
