@@ -168,32 +168,65 @@ export { PrimaryButton } from '@/components/primary-button'
  * here; closing and reopening the same panel scrolls again, which is right.
  * `scroll-mt` clears the sticky header.
  *
- * Two details, both learned by watching it fail on staging.
+ * Three details, all learned by watching it fail on staging.
  *
  * **After two frames, not on mount.** Inserting a panel above the viewport
  * makes the browser's scroll anchoring move the scroll position down by the
  * inserted height, to hold the row you were looking at still — and it does
- * that AFTER the effect runs, so a scroll issued on mount is immediately
- * undone. Waiting two frames lets the anchoring settle and scrolls from
- * wherever it left us.
+ * that AFTER the effect runs, so a scroll issued on mount is undone at once.
  *
- * **Instant, not smooth.** Measured on staging: the anchoring jump landed at
- * 1372px and the smooth animation then crawled back to 221px, which in a
- * background or throttled tab took seconds and read as a long unexplained
- * lurch. An instant move is one step to the thing just asked for, and is what
- * `prefers-reduced-motion` would have asked for anyway.
+ * **Again when the panel grows.** Every one of these fetches its contents, so
+ * it mounts short and fills in a moment later; anchoring shoves it off the top
+ * a second time as it grows. Measured on the money panel, which lands 476px
+ * above the viewport if only the first scroll happens. A ResizeObserver puts
+ * it back whenever it has drifted above the top edge.
+ *
+ * **Until the person takes over.** The correction stops on the first wheel,
+ * touch or key, and after three seconds regardless — a panel that hauls the
+ * page back while someone is deliberately scrolling away is worse than the
+ * bug.
+ *
+ * **Instant, not smooth.** The anchoring jump landed at 1372px and a smooth
+ * animation then crawled back, which in a throttled tab took seconds and read
+ * as a lurch. One step to the thing just asked for, which is also what
+ * `prefers-reduced-motion` would have asked for.
  */
 export function RevealOnOpen({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    let frame = 0
-    frame = requestAnimationFrame(() => {
-      frame = requestAnimationFrame(() => {
-        ref.current?.scrollIntoView({ block: 'start', behavior: 'auto' })
-      })
+    const el = ref.current
+    if (!el) return
+
+    let live = true
+    const reveal = () => {
+      if (live) el.scrollIntoView({ block: 'start', behavior: 'auto' })
+    }
+
+    const frame = requestAnimationFrame(() => requestAnimationFrame(reveal))
+
+    const observer = new ResizeObserver(() => {
+      if (el.getBoundingClientRect().top < 0) reveal()
     })
-    return () => cancelAnimationFrame(frame)
+    observer.observe(el)
+
+    const release = () => {
+      live = false
+      observer.disconnect()
+    }
+    const timer = window.setTimeout(release, 3000)
+    window.addEventListener('wheel', release, { passive: true })
+    window.addEventListener('touchmove', release, { passive: true })
+    window.addEventListener('keydown', release)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      window.clearTimeout(timer)
+      release()
+      window.removeEventListener('wheel', release)
+      window.removeEventListener('touchmove', release)
+      window.removeEventListener('keydown', release)
+    }
   }, [])
 
   return (
