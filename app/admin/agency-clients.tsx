@@ -27,11 +27,49 @@ import { GhostButton, PrimaryButton, Td, Th } from './panel-parts'
  *
  * No self-serve invite in v1: an admin issues the credential and passes it on.
  */
+/**
+ * The address to offer, built from the person and the agency.
+ *
+ * A guess, not a rule. Unlike a Team login — where the domain is a constant the
+ * server appends and no request can change (§5.5) — a client's address belongs
+ * to them, so this only fills the box in and every character stays editable.
+ * `.com` because it is right more often than anything else is, and wrong is one
+ * keystroke from right.
+ */
+function suggestedEmail(personName: string, agencyName: string): string {
+  const local = slug(personName, '.')
+  const domain = slug(agencyName, '')
+  if (!local || !domain) return ''
+  return `${local}@${domain}.com`
+}
+
+/** Latin letters and digits only, so a name with punctuation cannot produce a malformed address. */
+function slug(raw: string, join: string): string {
+  return raw
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .join(join)
+}
+
 export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agencyName: string }) {
   const queryClient = useQueryClient()
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  /**
+   * Whether the admin has typed over the suggested address (owner, 2026-10-01).
+   *
+   * The address is filled in from the person's name and the agency's —
+   * `Priya Raman` at Canopy becomes `priya.raman@canopy.com` — and stops
+   * tracking the moment anybody edits it, so correcting a domain is never
+   * undone by the next keystroke in the name. The same rule the Team form uses
+   * for its mailbox and password (§5.5).
+   */
+  const [emailTouched, setEmailTouched] = useState(false)
   const [password, setPassword] = useState('')
   const [brandIds, setBrandIds] = useState<string[]>([])
   const [revoking, setRevoking] = useState<string | null>(null)
@@ -47,7 +85,7 @@ export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agen
   })
 
   const reset = () => {
-    setAdding(false); setName(''); setEmail(''); setPassword(''); setBrandIds([])
+    setAdding(false); setName(''); setEmail(''); setEmailTouched(false); setPassword(''); setBrandIds([])
   }
 
   const create = useMutation({
@@ -119,7 +157,15 @@ export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agen
           onSubmit={(e) => { e.preventDefault(); create.mutate() }}
         >
           <Field label="Their name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Priya Raman" autoFocus />
+            <Input
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value)
+                if (!emailTouched) setEmail(suggestedEmail(e.target.value, agencyName))
+              }}
+              placeholder="Priya Raman"
+              autoFocus
+            />
           </Field>
           <Field label="Their email">
             {/*
@@ -127,8 +173,21 @@ export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agen
               Team login, where the server appends @workinxdigital.us and drops
               anything after an @ (§5.5). Getting that backwards would create
               client accounts on the company's domain.
+
+              Filled in from their name and the agency's as a starting point
+              (owner, 2026-10-01), and editable to the last character: the
+              suggestion is a guess about somebody else's domain, which is a
+              convenience and never a rule.
             */}
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="priya@theirbrand.com" type="email" />
+            <Input
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                setEmailTouched(true)
+              }}
+              placeholder={suggestedEmail('priya raman', agencyName) || 'priya@theirbrand.com'}
+              type="email"
+            />
           </Field>
           <Field label="Starting password" hint="At least 10 characters. Shown once when you save.">
             <Input value={password} onChange={(e) => setPassword(e.target.value)} />
