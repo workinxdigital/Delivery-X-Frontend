@@ -71,6 +71,58 @@ export function AgenciesPanel() {
   const [ratesFor, setRatesFor] = useState<{ id: string; name: string; fresh: boolean } | null>(
     null,
   )
+  /**
+   * The row a panel was opened from, so closing it puts you back (owner, 2026-10-01).
+   *
+   * The panels render above the table and now scroll themselves into view, so
+   * the agency list ends up a screen or more below whatever is open. Setting
+   * one agency's rates and then wanting another meant scrolling back down past
+   * the whole panel to find the list again.
+   */
+  const [cameFrom, setCameFrom] = useState<string | null>(null)
+
+  /**
+   * One panel at a time, across all four.
+   *
+   * Each had its own piece of state, so Rates for one agency and Money for
+   * another could both be open and the table sat below the pair of them. They
+   * answer different questions about different agencies; there is no reading
+   * that wants two at once, and every extra one is more distance back to the
+   * list.
+   */
+  function openPanel(
+    which: 'brands' | 'clients' | 'ledger' | 'rates',
+    agency: { id: string; name: string; billingMode?: 'DEPOSIT' | 'POSTPAID' | null },
+  ) {
+    setCameFrom(agency.id)
+    setBrandsFor(which === 'brands' ? { id: agency.id, name: agency.name } : null)
+    setClientsFor(which === 'clients' ? { id: agency.id, name: agency.name } : null)
+    setLedgerFor(
+      which === 'ledger'
+        ? { id: agency.id, name: agency.name, mode: agency.billingMode ?? 'POSTPAID' }
+        : null,
+    )
+    setRatesFor(which === 'rates' ? { id: agency.id, name: agency.name, fresh: false } : null)
+  }
+
+  /** Close everything and go back to the row it was opened from. */
+  function closePanels() {
+    setBrandsFor(null)
+    setClientsFor(null)
+    setLedgerFor(null)
+    setRatesFor(null)
+    const id = cameFrom
+    setCameFrom(null)
+    if (!id) return
+    /* After paint, so the row is where it will be once the panel has gone. */
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        document
+          .querySelector(`[data-agency-row="${id}"]`)
+          ?.scrollIntoView({ block: 'center', behavior: 'auto' }),
+      ),
+    )
+  }
 
   const { data: agencies = [], isLoading } = useQuery({
     queryKey: ['admin', 'agencies'],
@@ -99,6 +151,7 @@ export function AgenciesPanel() {
       toast(`${r.agency.name} added`, { description: 'Now set what they pay — until you do, their deliveries are unpriced.' })
       setDraft(EMPTY)
       setAdding(false)
+      setCameFrom(r.agency.id)
       setRatesFor({ id: r.agency.id, name: r.agency.name, fresh: true })
       refresh()
     },
@@ -274,7 +327,7 @@ export function AgenciesPanel() {
                   logged before the rate existed.
                 </p>
               </div>
-              <GhostButton onClick={() => setRatesFor(null)}>
+              <GhostButton onClick={closePanels}>
                 {ratesFor.fresh ? 'Done' : 'Close'}
               </GhostButton>
             </div>
@@ -297,7 +350,7 @@ export function AgenciesPanel() {
                   the survivor from then on.
                 </p>
               </div>
-              <GhostButton onClick={() => setBrandsFor(null)}>Close</GhostButton>
+              <GhostButton onClick={closePanels}>Close</GhostButton>
             </div>
 
             <AgencyBrands agencyId={brandsFor.id} agencyName={brandsFor.name} />
@@ -318,7 +371,7 @@ export function AgenciesPanel() {
                   anything internal.
                 </p>
               </div>
-              <GhostButton onClick={() => setClientsFor(null)}>Close</GhostButton>
+              <GhostButton onClick={closePanels}>Close</GhostButton>
             </div>
 
             <AgencyClients agencyId={clientsFor.id} agencyName={clientsFor.name} />
@@ -338,7 +391,7 @@ export function AgenciesPanel() {
                   client&rsquo;s statement straight away.
                 </p>
               </div>
-              <GhostButton onClick={() => setLedgerFor(null)}>Close</GhostButton>
+              <GhostButton onClick={closePanels}>Close</GhostButton>
             </div>
 
             <AgencyLedger agencyId={ledgerFor.id} agencyName={ledgerFor.name} billingMode={ledgerFor.mode} />
@@ -369,7 +422,12 @@ export function AgenciesPanel() {
             )}
 
             {agencies.map((a) => (
-              <tr key={a.id} className="border-rule hover:bg-wash border-b">
+              <tr
+                key={a.id}
+                /* Closing a panel scrolls back to the row it was opened from. */
+                data-agency-row={a.id}
+                className="border-rule hover:bg-wash scroll-mt-24 border-b"
+              >
                 <Td className="font-medium">{a.name}</Td>
                 <Td>
                   <AgencyTypePill type={a.type} />
@@ -456,7 +514,7 @@ export function AgenciesPanel() {
                   {confirming !== a.id && (
                     <GhostButton
                       onClick={() =>
-                        setBrandsFor(brandsFor?.id === a.id ? null : { id: a.id, name: a.name })
+                        brandsFor?.id === a.id ? closePanels() : openPanel('brands', a)
                       }
                       title={`Merge a misspelled brand for ${a.name}`}
                     >
@@ -467,7 +525,7 @@ export function AgenciesPanel() {
                   {confirming !== a.id && (
                     <GhostButton
                       onClick={() =>
-                        setClientsFor(clientsFor?.id === a.id ? null : { id: a.id, name: a.name })
+                        clientsFor?.id === a.id ? closePanels() : openPanel('clients', a)
                       }
                       title={`Who at ${a.name} can sign in`}
                     >
@@ -478,11 +536,7 @@ export function AgenciesPanel() {
                   {confirming !== a.id && (
                     <GhostButton
                       onClick={() =>
-                        setLedgerFor(
-                          ledgerFor?.id === a.id
-                            ? null
-                            : { id: a.id, name: a.name, mode: a.billingMode ?? 'POSTPAID' },
-                        )
+                        ledgerFor?.id === a.id ? closePanels() : openPanel('ledger', a)
                       }
                       title={`Deposits, adjustments and what ${a.name} has consumed`}
                     >
@@ -493,11 +547,7 @@ export function AgenciesPanel() {
                   {confirming !== a.id && (
                     <GhostButton
                       onClick={() =>
-                        setRatesFor(
-                          ratesFor?.id === a.id
-                            ? null
-                            : { id: a.id, name: a.name, fresh: false },
-                        )
+                        ratesFor?.id === a.id ? closePanels() : openPanel('rates', a)
                       }
                       title={`What ${a.name} pays`}
                     >
