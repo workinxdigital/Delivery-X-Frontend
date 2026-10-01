@@ -18,11 +18,71 @@ import {
   updateAgency,
 } from '@/lib/api/client'
 import type { AdminAgency } from '@/lib/api/types'
+import { cn } from '@/lib/utils'
 import { AgencyBrands } from './agency-brands'
 import { AgencyClients } from './agency-clients'
 import { AgencyLedger } from './agency-ledger'
 import { AgencyRates } from './agency-rates'
 import { GhostButton, PanelHeader, PrimaryButton, RevealOnOpen, Td, Th } from './panel-parts'
+
+/**
+ * The four views an agency has, and what each one is called.
+ *
+ * Declared once so the tab strip inside the panel and the buttons on the row
+ * cannot drift apart — they are the same four things reached two ways.
+ */
+type PanelKey = 'brands' | 'clients' | 'ledger' | 'rates'
+
+const PANELS: { key: PanelKey; label: string; title: (name: string) => string; lede: React.ReactNode }[] = [
+  {
+    key: 'brands',
+    label: 'Brands',
+    title: (name) => `${name} brands`,
+    lede: (
+      <>
+        Brands are created by typing one on the logging form, so a misspelling becomes its own
+        brand and splits that client&rsquo;s history in two. Merging folds one into another, moves
+        its deliveries across, and makes the old spelling resolve to the survivor from then on.
+      </>
+    ),
+  },
+  {
+    key: 'clients',
+    label: 'Clients',
+    title: (name) => `${name} client logins`,
+    lede: (
+      <>
+        Who on the client&rsquo;s side can sign in and read their own account. They see delivered
+        work, revision rounds and&nbsp;— for brands you have switched money on for&nbsp;— what it
+        cost. They can never see another account, another brand, or anything internal.
+      </>
+    ),
+  },
+  {
+    key: 'ledger',
+    label: 'Money',
+    title: (name) => `${name} money`,
+    lede: (
+      <>
+        Charges are written when a delivery or a revision round is logged, never typed here. Only
+        deposits and adjustments are posted by hand, and both appear on the client&rsquo;s
+        statement straight away.
+      </>
+    ),
+  },
+  {
+    key: 'rates',
+    label: 'Rates',
+    title: (name) => `${name} rates`,
+    lede: (
+      <>
+        What this agency pays, per service and tier. Nothing here is stored against a delivery, so
+        changing a rate re-prices this agency&rsquo;s history rather than rewriting it, and saving
+        one charges any delivery that was logged before the rate existed.
+      </>
+    ),
+  },
+]
 
 const TYPES = [
   { value: 'AGENCY', label: 'Agency, brings us their clients' },
@@ -62,15 +122,25 @@ export function AgenciesPanel() {
    * admin who has just typed a partner's name is exactly the person who knows
    * what that partner pays.
    */
-  /** Whose brands are open, for a merge (§2.2). */
-  const [brandsFor, setBrandsFor] = useState<{ id: string; name: string } | null>(null)
-  /** Whose client logins are open (§6.5). */
-  const [clientsFor, setClientsFor] = useState<{ id: string; name: string } | null>(null)
-  /** Whose money is open (§6.3). */
-  const [ledgerFor, setLedgerFor] = useState<{ id: string; name: string; mode: 'DEPOSIT' | 'POSTPAID' } | null>(null)
-  const [ratesFor, setRatesFor] = useState<{ id: string; name: string; fresh: boolean } | null>(
-    null,
-  )
+  /**
+   * The one open panel: which agency, and which of its four views (owner, 2026-10-01).
+   *
+   * Four separate pieces of state until now, which is what made switching
+   * views cost a journey. Each button lived only on the agency's ROW, and the
+   * panel scrolls itself to the top of the screen — so an admin reading an
+   * agency's client logins who then wanted its money had to scroll all the way
+   * back down to that row to find the next button, worst of all for an agency
+   * at the end of the list. One panel with its own tabs means the second view
+   * is one click from the first, where you already are.
+   */
+  const [panelFor, setPanelFor] = useState<{
+    id: string
+    name: string
+    mode: 'DEPOSIT' | 'POSTPAID'
+    which: PanelKey
+    /** Opened by itself straight after the agency was added (§5.5). */
+    fresh: boolean
+  } | null>(null)
   /**
    * The row a panel was opened from, so closing it puts you back (owner, 2026-10-01).
    *
@@ -81,36 +151,24 @@ export function AgenciesPanel() {
    */
   const [cameFrom, setCameFrom] = useState<string | null>(null)
 
-  /**
-   * One panel at a time, across all four.
-   *
-   * Each had its own piece of state, so Rates for one agency and Money for
-   * another could both be open and the table sat below the pair of them. They
-   * answer different questions about different agencies; there is no reading
-   * that wants two at once, and every extra one is more distance back to the
-   * list.
-   */
+  /** Open a view for an agency, remembering the row to come back to. */
   function openPanel(
-    which: 'brands' | 'clients' | 'ledger' | 'rates',
+    which: PanelKey,
     agency: { id: string; name: string; billingMode?: 'DEPOSIT' | 'POSTPAID' | null },
   ) {
     setCameFrom(agency.id)
-    setBrandsFor(which === 'brands' ? { id: agency.id, name: agency.name } : null)
-    setClientsFor(which === 'clients' ? { id: agency.id, name: agency.name } : null)
-    setLedgerFor(
-      which === 'ledger'
-        ? { id: agency.id, name: agency.name, mode: agency.billingMode ?? 'POSTPAID' }
-        : null,
-    )
-    setRatesFor(which === 'rates' ? { id: agency.id, name: agency.name, fresh: false } : null)
+    setPanelFor({
+      id: agency.id,
+      name: agency.name,
+      mode: agency.billingMode ?? 'POSTPAID',
+      which,
+      fresh: false,
+    })
   }
 
-  /** Close everything and go back to the row it was opened from. */
+  /** Close it and go back to the row it was opened from. */
   function closePanels() {
-    setBrandsFor(null)
-    setClientsFor(null)
-    setLedgerFor(null)
-    setRatesFor(null)
+    setPanelFor(null)
     const id = cameFrom
     setCameFrom(null)
     if (!id) return
@@ -152,7 +210,13 @@ export function AgenciesPanel() {
       setDraft(EMPTY)
       setAdding(false)
       setCameFrom(r.agency.id)
-      setRatesFor({ id: r.agency.id, name: r.agency.name, fresh: true })
+      setPanelFor({
+        id: r.agency.id,
+        name: r.agency.name,
+        mode: r.agency.billingMode ?? 'POSTPAID',
+        which: 'rates',
+        fresh: true,
+      })
       refresh()
     },
     onError,
@@ -312,89 +376,76 @@ export function AgenciesPanel() {
         </form>
       )}
 
-      {ratesFor && (
+      {panelFor && (
         <RevealOnOpen>
           <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
-            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-              <div>
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
                 <h3 className="text-dense font-medium">
-                  {ratesFor.fresh ? `What ${ratesFor.name} pays` : `${ratesFor.name} rates`}
+                  {panelFor.fresh
+                    ? `What ${panelFor.name} pays`
+                    : PANELS.find((p) => p.key === panelFor.which)!.title(panelFor.name)}
                 </h3>
-                <p className="text-ink-muted mt-0.5 text-micro">
-                  What this agency pays, per service and tier. Nothing here is stored
-                  against a delivery, so changing a rate re-prices this agency&rsquo;s history
-                  rather than rewriting it, and saving one charges any delivery that was
-                  logged before the rate existed.
+                <p className="text-ink-muted mt-0.5 max-w-prose text-micro">
+                  {PANELS.find((p) => p.key === panelFor.which)!.lede}
                 </p>
               </div>
-              <GhostButton onClick={closePanels}>
-                {ratesFor.fresh ? 'Done' : 'Close'}
-              </GhostButton>
+              <GhostButton onClick={closePanels}>{panelFor.fresh ? 'Done' : 'Close'}</GhostButton>
             </div>
 
-            <AgencyRates agencyId={ratesFor.id} agencyName={ratesFor.name} />
-          </section>
-        </RevealOnOpen>
-      )}
+            {/*
+              The four views, reachable from inside the panel (owner, 2026-10-01).
 
-      {brandsFor && (
-        <RevealOnOpen>
-          <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
-            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-              <div>
-                <h3 className="text-dense font-medium">{brandsFor.name} brands</h3>
-                <p className="text-ink-muted mt-0.5 text-micro">
-                  Brands are created by typing one on the logging form, so a misspelling becomes
-                  its own brand and splits that client&rsquo;s history in two. Merging folds one
-                  into another, moves its deliveries across, and makes the old spelling resolve to
-                  the survivor from then on.
-                </p>
-              </div>
-              <GhostButton onClick={closePanels}>Close</GhostButton>
+              Until now the only way to each one was its button on the agency's
+              ROW, and the panel scrolls itself to the top of the screen — so
+              reading an agency's client logins and then wanting its money meant
+              scrolling the whole list back down to that row, worst of all for
+              an agency at the end of it. The second view is now one click from
+              the first.
+            */}
+            <div
+              role="tablist"
+              aria-label={`${panelFor.name} views`}
+              className="border-rule mb-4 flex flex-wrap gap-1 border-b"
+            >
+              {PANELS.map((tab) => {
+                const current = tab.key === panelFor.which
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={current}
+                    onClick={() => setPanelFor({ ...panelFor, which: tab.key, fresh: false })}
+                    className={cn(
+                      'rounded-t-md px-3 py-1.5 text-dense transition-colors duration-[120ms] -mb-px border-b-2',
+                      current
+                        ? 'border-lime text-ink font-medium'
+                        : 'text-ink-muted hover:text-ink border-transparent',
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                )
+              })}
             </div>
 
-            <AgencyBrands agencyId={brandsFor.id} agencyName={brandsFor.name} />
-          </section>
-        </RevealOnOpen>
-      )}
-
-      {clientsFor && (
-        <RevealOnOpen>
-          <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
-            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-              <div>
-                <h3 className="text-dense font-medium">{clientsFor.name} client logins</h3>
-                <p className="text-ink-muted mt-0.5 text-micro">
-                  Who on the client&rsquo;s side can sign in and read their own account. They see
-                  delivered work, revision rounds and&nbsp;— for brands you have switched money on
-                  for&nbsp;— what it cost. They can never see another account, another brand, or
-                  anything internal.
-                </p>
-              </div>
-              <GhostButton onClick={closePanels}>Close</GhostButton>
-            </div>
-
-            <AgencyClients agencyId={clientsFor.id} agencyName={clientsFor.name} />
-          </section>
-        </RevealOnOpen>
-      )}
-
-      {ledgerFor && (
-        <RevealOnOpen>
-          <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
-            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-              <div>
-                <h3 className="text-dense font-medium">{ledgerFor.name} money</h3>
-                <p className="text-ink-muted mt-0.5 text-micro">
-                  Charges are written when a delivery or a revision round is logged, never typed
-                  here. Only deposits and adjustments are posted by hand, and both appear on the
-                  client&rsquo;s statement straight away.
-                </p>
-              </div>
-              <GhostButton onClick={closePanels}>Close</GhostButton>
-            </div>
-
-            <AgencyLedger agencyId={ledgerFor.id} agencyName={ledgerFor.name} billingMode={ledgerFor.mode} />
+            {panelFor.which === 'brands' && (
+              <AgencyBrands agencyId={panelFor.id} agencyName={panelFor.name} />
+            )}
+            {panelFor.which === 'clients' && (
+              <AgencyClients agencyId={panelFor.id} agencyName={panelFor.name} />
+            )}
+            {panelFor.which === 'ledger' && (
+              <AgencyLedger
+                agencyId={panelFor.id}
+                agencyName={panelFor.name}
+                billingMode={panelFor.mode}
+              />
+            )}
+            {panelFor.which === 'rates' && (
+              <AgencyRates agencyId={panelFor.id} agencyName={panelFor.name} />
+            )}
           </section>
         </RevealOnOpen>
       )}
@@ -514,7 +565,9 @@ export function AgenciesPanel() {
                   {confirming !== a.id && (
                     <GhostButton
                       onClick={() =>
-                        brandsFor?.id === a.id ? closePanels() : openPanel('brands', a)
+                        panelFor?.id === a.id && panelFor.which === 'brands'
+                          ? closePanels()
+                          : openPanel('brands', a)
                       }
                       title={`Merge a misspelled brand for ${a.name}`}
                     >
@@ -525,7 +578,9 @@ export function AgenciesPanel() {
                   {confirming !== a.id && (
                     <GhostButton
                       onClick={() =>
-                        clientsFor?.id === a.id ? closePanels() : openPanel('clients', a)
+                        panelFor?.id === a.id && panelFor.which === 'clients'
+                          ? closePanels()
+                          : openPanel('clients', a)
                       }
                       title={`Who at ${a.name} can sign in`}
                     >
@@ -536,7 +591,9 @@ export function AgenciesPanel() {
                   {confirming !== a.id && (
                     <GhostButton
                       onClick={() =>
-                        ledgerFor?.id === a.id ? closePanels() : openPanel('ledger', a)
+                        panelFor?.id === a.id && panelFor.which === 'ledger'
+                          ? closePanels()
+                          : openPanel('ledger', a)
                       }
                       title={`Deposits, adjustments and what ${a.name} has consumed`}
                     >
@@ -547,7 +604,9 @@ export function AgenciesPanel() {
                   {confirming !== a.id && (
                     <GhostButton
                       onClick={() =>
-                        ratesFor?.id === a.id ? closePanels() : openPanel('rates', a)
+                        panelFor?.id === a.id && panelFor.which === 'rates'
+                          ? closePanels()
+                          : openPanel('rates', a)
                       }
                       title={`What ${a.name} pays`}
                     >
