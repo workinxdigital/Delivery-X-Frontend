@@ -673,6 +673,17 @@ export type ClientActivity = {
 export const getClientActivity = (params: { take?: number } = {}) =>
   apiFetch<ClientActivity>(`/client/activity${qs(params)}`)
 
+/** A query the client raised on a charge, with the answer if one has come. */
+export type ClientQuery = ClientLedgerEntry & {
+  askedOn: string | null
+  answeredOn: string | null
+}
+
+export type ClientQueries = { queries: ClientQuery[]; open: number }
+
+/** Everything this account has queried, open and answered (owner, 2026-10-01). */
+export const getClientQueries = () => apiFetch<ClientQueries>('/client/queries')
+
 /** Who at the client can sign in, and what each of them sees (§4.5). */
 export type ClientAccount = {
   account: { name: string; billingMode: 'DEPOSIT' | 'POSTPAID'; includedRounds: number }

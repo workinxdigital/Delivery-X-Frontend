@@ -28,6 +28,9 @@ const CLIENT_LINKS = [
   { href: '/client', label: 'Overview' },
   { href: '/client/projects', label: 'Projects' },
   { href: '/client/activity', label: 'Activity' },
+  /* The counterpart to the admin's Queries tab (owner, 2026-10-01). Before it,
+     an answer rendered on one charge inside one project and nowhere else. */
+  { href: '/client/queries', label: 'Queries' },
   { href: '/client/account', label: 'Access' },
 ]
 
