@@ -12,6 +12,31 @@
 export const WORK_EMAIL_DOMAIN = 'workinxdigital.us'
 
 /**
+ * The domain client logins are issued on (owner, 2026-10-01).
+ *
+ * Separate from the staff domain and deliberately not the client's own: a
+ * credential WorkinX issues belongs on a domain WorkinX owns. Mirrors the
+ * server constant, which is what actually gets appended.
+ */
+export const CLIENT_EMAIL_DOMAIN = 'workinxbilling.com'
+
+/**
+ * The default mailbox for a client login, from the account it reads.
+ *
+ * A starting point the admin can type over — the DOMAIN is the fixed part, not
+ * this. Letters and digits only, so an agency called "Mindful-Goods & Co."
+ * starts as `mindfulgoodsco` rather than something a mail system would refuse.
+ */
+export function clientEmailLocal(scopeName: string): string {
+  return scopeName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '')
+}
+
+/**
  * The work address, derived from the name.
  *
  * Dots, because that is how a mail system is conventionally addressed. The

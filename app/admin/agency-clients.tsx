@@ -6,7 +6,9 @@ import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Field } from '@/components/field'
 import { Pill } from '@/components/pill'
+import { EmailLocalInput } from '@/components/email-local-input'
 import { Input } from '@/components/ui/input'
+import { CLIENT_EMAIL_DOMAIN, clientEmailLocal } from '@/lib/default-password'
 import {
   createClientUser,
   getAdminBrands,
@@ -27,37 +29,22 @@ import { GhostButton, PrimaryButton, Td, Th } from './panel-parts'
  *
  * No self-serve invite in v1: an admin issues the credential and passes it on.
  */
-/**
- * The address a client login will be issued on (owner, 2026-10-01).
- *
- * Shown, not typed. The server derives this and appends the domain itself —
- * the same rule staff addresses follow (§5.5) and for the same reason: no
- * request can create an account on a domain the company does not own. It
- * replaced the client's OWN domain, which produced addresses nobody at WorkinX
- * could receive mail at.
- *
- * The brand when the login is scoped to exactly one, otherwise the agency, so
- * the address says what the credential can see. Mirrored here only so the admin
- * reads the same thing the server is about to write; the field is not editable
- * and nothing it shows is sent.
- */
-const CLIENT_EMAIL_DOMAIN = 'workinxbilling.com'
-
-function clientEmailFor(scopeName: string): string {
-  const local = scopeName
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '')
-  return local ? `${local}@${CLIENT_EMAIL_DOMAIN}` : ''
-}
-
 export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agencyName: string }) {
   const queryClient = useQueryClient()
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
+  /**
+   * The part before the @, editable (owner, 2026-10-01).
+   *
+   * The DOMAIN is the fixed half — it is a constant the server appends, so no
+   * request can put a client account on a domain the company does not own. The
+   * mailbox is a default, not a rule: it follows the scope until somebody
+   * types over it, and then stops, which is how the Team form treats its own
+   * mailbox (§5.5).
+   */
+  const [mailbox, setMailbox] = useState('')
+  const [mailboxTouched, setMailboxTouched] = useState(false)
   const [brandIds, setBrandIds] = useState<string[]>([])
   const [revoking, setRevoking] = useState<string | null>(null)
   const [issued, setIssued] = useState<{ email: string; password: string } | null>(null)
@@ -78,16 +65,19 @@ export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agen
    */
   const scopedBrandName =
     brandIds.length === 1 ? (brands.find((b) => b.id === brandIds[0])?.name ?? null) : null
-  const issuedEmail = clientEmailFor(scopedBrandName ?? agencyName)
+  const defaultMailbox = clientEmailLocal(scopedBrandName ?? agencyName)
+  const effectiveMailbox = mailboxTouched ? mailbox : defaultMailbox
+  const issuedEmail = effectiveMailbox ? `${effectiveMailbox}@${CLIENT_EMAIL_DOMAIN}` : ''
 
   const reset = () => {
-    setAdding(false); setName(''); setPassword(''); setBrandIds([])
+    setAdding(false); setName(''); setPassword(''); setBrandIds([]); setMailbox(''); setMailboxTouched(false)
   }
 
   const create = useMutation({
     mutationFn: () =>
       createClientUser(agencyId, {
         name: name.trim(),
+        emailLocal: effectiveMailbox,
         password,
         ...(brandIds.length > 0 ? { brandIds } : {}),
       }),
@@ -174,17 +164,20 @@ export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agen
               scoped to exactly one, otherwise the agency — so the address says
               what the credential can see.
             */}
-            <output
-              data-slot="control"
-              className="border-control bg-surface text-ink block rounded-md border px-3 py-2 text-dense"
-            >
-              {issuedEmail || <span className="text-ink-faint">Pick what they can see</span>}
-            </output>
+            <EmailLocalInput
+              value={effectiveMailbox}
+              domain={CLIENT_EMAIL_DOMAIN}
+              onChange={(v) => {
+                setMailbox(v)
+                setMailboxTouched(true)
+              }}
+            />
             <p className="text-ink-muted mt-1 text-micro">
               {scopedBrandName
-                ? `Named after ${scopedBrandName}, the one brand this login reads.`
-                : `Named after ${agencyName}, which is the whole account.`}{' '}
-              One login per address — revoke the existing one to issue another.
+                ? `Starts from ${scopedBrandName}, the one brand this login reads.`
+                : `Starts from ${agencyName}, which is the whole account.`}{' '}
+              The domain is fixed. One login per address — revoke the existing one to issue
+              another.
             </p>
           </Field>
 

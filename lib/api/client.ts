@@ -817,7 +817,7 @@ export const getClientUsers = (agencyId: string) =>
  */
 export const createClientUser = (
   agencyId: string,
-  payload: { name: string; password: string; brandIds?: string[] },
+  payload: { name: string; emailLocal: string; password: string; brandIds?: string[] },
 ) =>
   apiFetch<{ user: { id: string; name: string; email: string } }>(
     `/admin/agencies/${agencyId}/client-users`,

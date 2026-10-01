@@ -17,11 +17,16 @@ export function EmailLocalInput({
   value,
   onChange,
   invalid,
+  /* Staff and client logins sit on different company domains (§5.5, and
+     2026-10-01 for clients). Both are constants this app owns and the server
+     appends; the prop only decides which one is drawn beside the field. */
+  domain = WORK_EMAIL_DOMAIN,
 }: {
   id?: string
   value: string
   onChange: (value: string) => void
   invalid?: boolean
+  domain?: string
 }) {
   return (
     /*
@@ -65,7 +70,7 @@ export function EmailLocalInput({
         squeezing the domain into an ellipsis.
       */}
       <span aria-hidden className="text-ink-muted shrink-0 select-none text-micro">
-        @{WORK_EMAIL_DOMAIN}
+        @{domain}
       </span>
     </div>
   )
