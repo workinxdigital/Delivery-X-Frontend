@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { CodePill, Pill } from '@/components/pill'
+import { QueryThread } from '@/components/query-thread'
 import { getClientQueries, type ClientQuery } from '@/lib/api/client'
 import { formatDateOnly, formatMoneyMinor } from '@/lib/format'
 
@@ -115,25 +116,13 @@ function QueryRow({ query: q }: { query: ClientQuery }) {
         {q.answeredOn ? ` · answered ${formatDateOnly(q.answeredOn)}` : ''}
       </p>
 
-      <div className="border-rule mt-3 space-y-1 border-l-2 pl-3">
-        {q.disputeNote && <p className="text-ink-muted text-micro">You asked: {q.disputeNote}</p>}
-        {q.disputeResponse ? (
-          <p className="text-ink text-micro">
-            <span className="font-medium">
-              WorkinX replied
-              {q.disputeResolution === 'CREDITED'
-                ? ' · credited'
-                : q.disputeResolution === 'DISMISSED'
-                  ? ' · the charge stands'
-                  : ''}
-              :
-            </span>{' '}
-            {q.disputeResponse}
-          </p>
-        ) : (
-          <p className="text-ink-faint text-micro">Waiting on your project manager.</p>
-        )}
-      </div>
+      <QueryThread
+        className="mt-3"
+        note={q.disputeNote}
+        response={q.disputeResponse}
+        resolution={q.disputeResolution}
+        open={!answered}
+      />
     </li>
   )
 }

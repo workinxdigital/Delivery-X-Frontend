@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { CodePill, ComplexityPill, Pill } from '@/components/pill'
+import { QueryThread } from '@/components/query-thread'
 import { flagCharge, getClientProject, type ChargeDetail } from '@/lib/api/client'
 import { formatDateOnly, formatMoneyMinor } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -273,35 +274,17 @@ export function ClientProjectScreen({ id }: { id: string }) {
                   The note used to show only while the flag was open, so the
                   moment it was answered the client's own question vanished and
                   nothing took its place — which reads as having been ignored.
-                  Both halves stay once there is a reply, and the reply says
-                  which way it went: a credit is a second line on the statement,
-                  and "the charge stands" is a decision somebody should be able
-                  to read back months later.
+                  Both halves stay once there is a reply. Shared with the
+                  Queries screen, so one conversation cannot be typeset two
+                  ways.
                 */}
-                {(c.disputeNote || c.disputeResponse) && (
-                  <div className="border-rule mt-3 space-y-1 border-l-2 pl-3">
-                    {c.disputeNote && (
-                      <p className="text-ink-muted text-micro">You asked: {c.disputeNote}</p>
-                    )}
-                    {c.disputeResponse && (
-                      <p className="text-ink text-micro">
-                        <span className="font-medium">
-                          WorkinX replied
-                          {c.disputeResolution === 'CREDITED'
-                            ? ' · credited'
-                            : c.disputeResolution === 'DISMISSED'
-                              ? ' · the charge stands'
-                              : ''}
-                          :
-                        </span>{' '}
-                        {c.disputeResponse}
-                      </p>
-                    )}
-                    {c.disputed && !c.disputeResponse && (
-                      <p className="text-ink-faint text-micro">Waiting on your project manager.</p>
-                    )}
-                  </div>
-                )}
+                <QueryThread
+                  className="mt-3"
+                  note={c.disputeNote}
+                  response={c.disputeResponse}
+                  resolution={c.disputeResolution}
+                  open={c.disputed}
+                />
               </li>
             ))}
           </ul>
