@@ -32,13 +32,26 @@ export function ClientProjectScreen({ id }: { id: string }) {
   const flag = useMutation({
     mutationFn: ({ entryId, text }: { entryId: string; text: string }) =>
       flagCharge(entryId, text || null),
-    onSuccess: () => {
-      toast('Flagged for review', {
-        description: 'Your project manager has been notified. The amount is unchanged while it is looked at.',
+    /*
+     * Names the charge, and claims nothing about who was told (owner,
+     * 2026-10-01). It used to say "Your project manager has been notified",
+     * which was not true of anybody: flagging wrote no audit row, so it
+     * reached neither the notification feed nor a person — it waited for
+     * somebody to open the Queries tab. The audit row exists now, so an admin
+     * does see it, but the confirmation is still about what the client just
+     * did rather than about machinery they cannot check.
+     */
+    onSuccess: (_r, { entryId }) => {
+      const charge = data?.project?.charges?.find((c) => c.id === entryId)
+      toast('Query sent', {
+        description: charge
+          ? `${charge.description}. It is on your Queries page, and the amount is unchanged while we look at it.`
+          : 'It is on your Queries page, and the amount is unchanged while we look at it.',
       })
       setFlagging(null)
       setNote('')
       void queryClient.invalidateQueries({ queryKey: ['client', 'project', id] })
+      void queryClient.invalidateQueries({ queryKey: ['client', 'queries'] })
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'That did not work'),
   })
@@ -238,7 +251,7 @@ export function ClientProjectScreen({ id }: { id: string }) {
                           onClick={() => flag.mutate({ entryId: c.id, text: note })}
                           className="border-control hover:bg-wash rounded-md border px-2.5 py-1 text-micro"
                         >
-                          {flag.isPending ? 'Sending' : 'Send to my project manager'}
+                          {flag.isPending ? 'Sending' : 'Send this query'}
                         </button>
                         <button
                           type="button"
