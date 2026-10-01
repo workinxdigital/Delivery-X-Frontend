@@ -161,11 +161,6 @@ export function LoginForm() {
             </PrimaryButton>
           </form>
         </div>
-
-        <p className="text-ink-faint mt-5 text-micro">
-          No password? Run <span className="code">npm run set-password</span> in the API
-          project to set one.
-        </p>
       </div>
     </div>
   )
