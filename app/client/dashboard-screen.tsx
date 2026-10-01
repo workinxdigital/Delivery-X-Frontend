@@ -111,6 +111,29 @@ export function ClientDashboardScreen() {
                 </p>
               </div>
             )}
+
+            {/*
+              The post-paid counterpart (owner, 2026-10-01).
+
+              A pool bar is a deposit idea and no longer draws here, but a
+              partner who has settled invoices has money on the account and the
+              card said nothing about it — an "Accrued $0.00" headline above a
+              paid-in list of a million dollars, with no statement of how the
+              two relate. This is that relationship in one line: what has been
+              paid, and whether the account is ahead or behind.
+            */}
+            {data.account.billingMode === 'POSTPAID' && data.balance.creditedMinor > 0 && (
+              <p className="text-ink-muted mt-4 text-micro">
+                {formatMoneyMinor(data.balance.creditedMinor)} paid in ·{' '}
+                {data.balance.availableMinor >= 0 ? (
+                  <>{formatMoneyMinor(data.balance.availableMinor)} in credit</>
+                ) : (
+                  <span className="text-beyond">
+                    {formatMoneyMinor(-data.balance.availableMinor)} outstanding
+                  </span>
+                )}
+              </p>
+            )}
           </div>
 
           {/* Two halves of one card, so they share a top edge and never drift. */}
