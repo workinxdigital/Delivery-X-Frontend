@@ -128,7 +128,21 @@ function Description({ entry: e }: { entry: ClientLedgerEntry }) {
         <span>{e.description}</span>
       )}
       {e.taskCode && <CodePill>{e.taskCode}</CodePill>}
-      {e.disputed && <Pill tone="beyond">flagged</Pill>}
+      {/*
+        Both halves of a query, not just the open one (owner, 2026-10-01).
+
+        `disputed` is true only while a query is OUTSTANDING, so the pill used
+        to vanish the moment it was answered and the row went back to looking
+        like every other charge — nothing on the statement said the line had
+        ever been questioned, let alone explained. The answered mark is
+        outline rather than the warning red: it is a settled fact, not
+        something waiting on anybody, and the full exchange is on Queries.
+      */}
+      {e.disputed ? (
+        <Pill tone="beyond">flagged</Pill>
+      ) : (
+        e.answered && <Pill tone="outline">answered</Pill>
+      )}
       {e.kind === 'REVERSAL' && <Pill tone="outline">credit</Pill>}
     </span>
   )
