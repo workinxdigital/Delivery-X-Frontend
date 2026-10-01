@@ -166,16 +166,34 @@ export { PrimaryButton } from '@/components/primary-button'
  *
  * Scrolls on mount rather than on a state change, because mounting IS opening
  * here; closing and reopening the same panel scrolls again, which is right.
- * `scroll-mt` clears the sticky header, and the smooth behaviour is dropped
- * under `prefers-reduced-motion` — a jump of a thousand pixels is exactly the
- * kind of motion that setting is about.
+ * `scroll-mt` clears the sticky header.
+ *
+ * Two details, both learned by watching it fail on staging.
+ *
+ * **After two frames, not on mount.** Inserting a panel above the viewport
+ * makes the browser's scroll anchoring move the scroll position down by the
+ * inserted height, to hold the row you were looking at still — and it does
+ * that AFTER the effect runs, so a scroll issued on mount is immediately
+ * undone. Waiting two frames lets the anchoring settle and scrolls from
+ * wherever it left us.
+ *
+ * **Instant, not smooth.** Measured on staging: the anchoring jump landed at
+ * 1372px and the smooth animation then crawled back to 221px, which in a
+ * background or throttled tab took seconds and read as a long unexplained
+ * lurch. An instant move is one step to the thing just asked for, and is what
+ * `prefers-reduced-motion` would have asked for anyway.
  */
 export function RevealOnOpen({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    ref.current?.scrollIntoView({ block: 'start', behavior: reduced ? 'auto' : 'smooth' })
+    let frame = 0
+    frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        ref.current?.scrollIntoView({ block: 'start', behavior: 'auto' })
+      })
+    })
+    return () => cancelAnimationFrame(frame)
   }, [])
 
   return (
