@@ -22,7 +22,7 @@ import { AgencyBrands } from './agency-brands'
 import { AgencyClients } from './agency-clients'
 import { AgencyLedger } from './agency-ledger'
 import { AgencyRates } from './agency-rates'
-import { GhostButton, PanelHeader, PrimaryButton, Td, Th } from './panel-parts'
+import { GhostButton, PanelHeader, PrimaryButton, RevealOnOpen, Td, Th } from './panel-parts'
 
 const TYPES = [
   { value: 'AGENCY', label: 'Agency, brings us their clients' },
@@ -96,7 +96,7 @@ export function AgenciesPanel() {
         freeRevisionAllowance: Number(draft.freeRevisionAllowance),
       }),
     onSuccess: (r) => {
-      toast(`${r.agency.name} added`, { description: 'Now set what they pay, or leave the house rates.' })
+      toast(`${r.agency.name} added`, { description: 'Now set what they pay — until you do, their deliveries are unpriced.' })
       setDraft(EMPTY)
       setAdding(false)
       setRatesFor({ id: r.agency.id, name: r.agency.name, fresh: true })
@@ -260,81 +260,90 @@ export function AgenciesPanel() {
       )}
 
       {ratesFor && (
-        <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-            <div>
-              <h3 className="text-dense font-medium">
-                {ratesFor.fresh ? `What ${ratesFor.name} pays` : `${ratesFor.name} rates`}
-              </h3>
-              <p className="text-ink-muted mt-0.5 text-micro">
-                Overrides the house rate card, per service and tier. Nothing here is stored
-                against a delivery, so changing a rate re-prices this agency&rsquo;s history
-                rather than rewriting it.
-              </p>
+        <RevealOnOpen>
+          <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+              <div>
+                <h3 className="text-dense font-medium">
+                  {ratesFor.fresh ? `What ${ratesFor.name} pays` : `${ratesFor.name} rates`}
+                </h3>
+                <p className="text-ink-muted mt-0.5 text-micro">
+                  What this agency pays, per service and tier. Nothing here is stored
+                  against a delivery, so changing a rate re-prices this agency&rsquo;s history
+                  rather than rewriting it, and saving one charges any delivery that was
+                  logged before the rate existed.
+                </p>
+              </div>
+              <GhostButton onClick={() => setRatesFor(null)}>
+                {ratesFor.fresh ? 'Done' : 'Close'}
+              </GhostButton>
             </div>
-            <GhostButton onClick={() => setRatesFor(null)}>
-              {ratesFor.fresh ? 'Done' : 'Close'}
-            </GhostButton>
-          </div>
 
-          <AgencyRates agencyId={ratesFor.id} agencyName={ratesFor.name} />
-        </section>
+            <AgencyRates agencyId={ratesFor.id} agencyName={ratesFor.name} />
+          </section>
+        </RevealOnOpen>
       )}
 
       {brandsFor && (
-        <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-            <div>
-              <h3 className="text-dense font-medium">{brandsFor.name} brands</h3>
-              <p className="text-ink-muted mt-0.5 text-micro">
-                Brands are created by typing one on the logging form, so a misspelling becomes
-                its own brand and splits that client&rsquo;s history in two. Merging folds one
-                into another, moves its deliveries across, and makes the old spelling resolve to
-                the survivor from then on.
-              </p>
+        <RevealOnOpen>
+          <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+              <div>
+                <h3 className="text-dense font-medium">{brandsFor.name} brands</h3>
+                <p className="text-ink-muted mt-0.5 text-micro">
+                  Brands are created by typing one on the logging form, so a misspelling becomes
+                  its own brand and splits that client&rsquo;s history in two. Merging folds one
+                  into another, moves its deliveries across, and makes the old spelling resolve to
+                  the survivor from then on.
+                </p>
+              </div>
+              <GhostButton onClick={() => setBrandsFor(null)}>Close</GhostButton>
             </div>
-            <GhostButton onClick={() => setBrandsFor(null)}>Close</GhostButton>
-          </div>
 
-          <AgencyBrands agencyId={brandsFor.id} agencyName={brandsFor.name} />
-        </section>
+            <AgencyBrands agencyId={brandsFor.id} agencyName={brandsFor.name} />
+          </section>
+        </RevealOnOpen>
       )}
 
       {clientsFor && (
-        <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-            <div>
-              <h3 className="text-dense font-medium">{clientsFor.name} client logins</h3>
-              <p className="text-ink-muted mt-0.5 text-micro">
-                Who on the client&rsquo;s side can sign in and read their own account. They see
-                delivered work, revision rounds and&nbsp;— for brands you have switched money on
-                for&nbsp;— what it cost. They can never see another account, another brand, or
-                anything internal.
-              </p>
+        <RevealOnOpen>
+          <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+              <div>
+                <h3 className="text-dense font-medium">{clientsFor.name} client logins</h3>
+                <p className="text-ink-muted mt-0.5 text-micro">
+                  Who on the client&rsquo;s side can sign in and read their own account. They see
+                  delivered work, revision rounds and&nbsp;— for brands you have switched money on
+                  for&nbsp;— what it cost. They can never see another account, another brand, or
+                  anything internal.
+                </p>
+              </div>
+              <GhostButton onClick={() => setClientsFor(null)}>Close</GhostButton>
             </div>
-            <GhostButton onClick={() => setClientsFor(null)}>Close</GhostButton>
-          </div>
 
-          <AgencyClients agencyId={clientsFor.id} agencyName={clientsFor.name} />
-        </section>
+            <AgencyClients agencyId={clientsFor.id} agencyName={clientsFor.name} />
+          </section>
+        </RevealOnOpen>
       )}
 
       {ledgerFor && (
-        <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-            <div>
-              <h3 className="text-dense font-medium">{ledgerFor.name} money</h3>
-              <p className="text-ink-muted mt-0.5 text-micro">
-                Charges are written when a delivery or a revision round is logged, never typed
-                here. Only deposits and adjustments are posted by hand, and both appear on the
-                client&rsquo;s statement straight away.
-              </p>
+        <RevealOnOpen>
+          <section className="border-rule bg-wash/40 mb-6 rounded-lg border p-4">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+              <div>
+                <h3 className="text-dense font-medium">{ledgerFor.name} money</h3>
+                <p className="text-ink-muted mt-0.5 text-micro">
+                  Charges are written when a delivery or a revision round is logged, never typed
+                  here. Only deposits and adjustments are posted by hand, and both appear on the
+                  client&rsquo;s statement straight away.
+                </p>
+              </div>
+              <GhostButton onClick={() => setLedgerFor(null)}>Close</GhostButton>
             </div>
-            <GhostButton onClick={() => setLedgerFor(null)}>Close</GhostButton>
-          </div>
 
-          <AgencyLedger agencyId={ledgerFor.id} agencyName={ledgerFor.name} billingMode={ledgerFor.mode} />
-        </section>
+            <AgencyLedger agencyId={ledgerFor.id} agencyName={ledgerFor.name} billingMode={ledgerFor.mode} />
+          </section>
+        </RevealOnOpen>
       )}
 
       <div className="overflow-x-auto">

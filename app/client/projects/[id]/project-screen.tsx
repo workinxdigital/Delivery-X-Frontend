@@ -267,8 +267,40 @@ export function ClientProjectScreen({ id }: { id: string }) {
                 */}
                 <ChargeWorking detail={c.detail} totalMinor={c.amountMinor} />
 
-                {c.disputed && c.disputeNote && (
-                  <p className="text-ink-muted mt-2 text-micro">You said: {c.disputeNote}</p>
+                {/*
+                  The query and its answer, as an exchange (owner, 2026-10-01).
+
+                  The note used to show only while the flag was open, so the
+                  moment it was answered the client's own question vanished and
+                  nothing took its place — which reads as having been ignored.
+                  Both halves stay once there is a reply, and the reply says
+                  which way it went: a credit is a second line on the statement,
+                  and "the charge stands" is a decision somebody should be able
+                  to read back months later.
+                */}
+                {(c.disputeNote || c.disputeResponse) && (
+                  <div className="border-rule mt-3 space-y-1 border-l-2 pl-3">
+                    {c.disputeNote && (
+                      <p className="text-ink-muted text-micro">You asked: {c.disputeNote}</p>
+                    )}
+                    {c.disputeResponse && (
+                      <p className="text-ink text-micro">
+                        <span className="font-medium">
+                          WorkinX replied
+                          {c.disputeResolution === 'CREDITED'
+                            ? ' · credited'
+                            : c.disputeResolution === 'DISMISSED'
+                              ? ' · the charge stands'
+                              : ''}
+                          :
+                        </span>{' '}
+                        {c.disputeResponse}
+                      </p>
+                    )}
+                    {c.disputed && !c.disputeResponse && (
+                      <p className="text-ink-faint text-micro">Waiting on your project manager.</p>
+                    )}
+                  </div>
                 )}
               </li>
             ))}

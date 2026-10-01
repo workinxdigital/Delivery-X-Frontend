@@ -573,6 +573,11 @@ export type ClientLedgerEntry = {
   description: string
   disputed: boolean
   disputeNote: string | null
+  /* The admin's answer, so a query reads as an exchange rather than a flag
+     that silently disappears (owner, 2026-10-01). */
+  answered: boolean
+  disputeResolution: 'DISMISSED' | 'CREDITED' | null
+  disputeResponse: string | null
   brandName: string | null
   taskCode: string | null
   /** Present when the entry belongs to a project, so the row can open it. */

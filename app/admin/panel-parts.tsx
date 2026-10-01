@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 
 /** Shared chrome for the admin panels, so the three read as one screen. */
@@ -151,3 +152,35 @@ export function GhostButton({
  * sign-in button went black.
  */
 export { PrimaryButton } from '@/components/primary-button'
+
+/**
+ * A panel that brings itself into view when it opens (owner, 2026-10-01).
+ *
+ * The agency panels — rates, money, brands, client logins — all render ABOVE
+ * the agencies table, so opening one for a row far down the list inserted it
+ * off the top of the screen: measured at 1036px above the viewport for an
+ * agency halfway down the list. The browser's scroll anchoring held the ROW
+ * still, which is the opposite of what is wanted — the thing just asked for is
+ * the thing to look at. Nothing said the panel had opened, so it read as a
+ * dead button until you happened to scroll up and find it.
+ *
+ * Scrolls on mount rather than on a state change, because mounting IS opening
+ * here; closing and reopening the same panel scrolls again, which is right.
+ * `scroll-mt` clears the sticky header, and the smooth behaviour is dropped
+ * under `prefers-reduced-motion` — a jump of a thousand pixels is exactly the
+ * kind of motion that setting is about.
+ */
+export function RevealOnOpen({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    ref.current?.scrollIntoView({ block: 'start', behavior: reduced ? 'auto' : 'smooth' })
+  }, [])
+
+  return (
+    <div ref={ref} className="scroll-mt-24">
+      {children}
+    </div>
+  )
+}
