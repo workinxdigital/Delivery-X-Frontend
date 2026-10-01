@@ -810,9 +810,14 @@ export type AdminClientUser = {
 export const getClientUsers = (agencyId: string) =>
   apiFetch<{ users: AdminClientUser[] }>(`/admin/agencies/${agencyId}/client-users`).then((r) => r.users)
 
+/**
+ * Issue a client login. The address is NOT sent: the server derives it from the
+ * account and appends its own domain (owner, 2026-10-01), so nothing here can
+ * put a client account on a domain the company does not own.
+ */
 export const createClientUser = (
   agencyId: string,
-  payload: { name: string; email: string; password: string; brandIds?: string[] },
+  payload: { name: string; password: string; brandIds?: string[] },
 ) =>
   apiFetch<{ user: { id: string; name: string; email: string } }>(
     `/admin/agencies/${agencyId}/client-users`,

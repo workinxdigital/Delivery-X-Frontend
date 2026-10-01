@@ -28,48 +28,35 @@ import { GhostButton, PrimaryButton, Td, Th } from './panel-parts'
  * No self-serve invite in v1: an admin issues the credential and passes it on.
  */
 /**
- * The address to offer, built from the person and the agency.
+ * The address a client login will be issued on (owner, 2026-10-01).
  *
- * A guess, not a rule. Unlike a Team login — where the domain is a constant the
- * server appends and no request can change (§5.5) — a client's address belongs
- * to them, so this only fills the box in and every character stays editable.
- * `.com` because it is right more often than anything else is, and wrong is one
- * keystroke from right.
+ * Shown, not typed. The server derives this and appends the domain itself —
+ * the same rule staff addresses follow (§5.5) and for the same reason: no
+ * request can create an account on a domain the company does not own. It
+ * replaced the client's OWN domain, which produced addresses nobody at WorkinX
+ * could receive mail at.
+ *
+ * The brand when the login is scoped to exactly one, otherwise the agency, so
+ * the address says what the credential can see. Mirrored here only so the admin
+ * reads the same thing the server is about to write; the field is not editable
+ * and nothing it shows is sent.
  */
-function suggestedEmail(personName: string, agencyName: string): string {
-  const local = slug(personName, '.')
-  const domain = slug(agencyName, '')
-  if (!local || !domain) return ''
-  return `${local}@${domain}.com`
-}
+const CLIENT_EMAIL_DOMAIN = 'workinxbilling.com'
 
-/** Latin letters and digits only, so a name with punctuation cannot produce a malformed address. */
-function slug(raw: string, join: string): string {
-  return raw
+function clientEmailFor(scopeName: string): string {
+  const local = scopeName
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim()
-    .split(/[^a-z0-9]+/)
-    .filter(Boolean)
-    .join(join)
+    .replace(/[^a-z0-9]+/g, '')
+  return local ? `${local}@${CLIENT_EMAIL_DOMAIN}` : ''
 }
 
 export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agencyName: string }) {
   const queryClient = useQueryClient()
   const [adding, setAdding] = useState(false)
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  /**
-   * Whether the admin has typed over the suggested address (owner, 2026-10-01).
-   *
-   * The address is filled in from the person's name and the agency's —
-   * `Priya Raman` at Canopy becomes `priya.raman@canopy.com` — and stops
-   * tracking the moment anybody edits it, so correcting a domain is never
-   * undone by the next keystroke in the name. The same rule the Team form uses
-   * for its mailbox and password (§5.5).
-   */
-  const [emailTouched, setEmailTouched] = useState(false)
   const [password, setPassword] = useState('')
   const [brandIds, setBrandIds] = useState<string[]>([])
   const [revoking, setRevoking] = useState<string | null>(null)
@@ -84,15 +71,23 @@ export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agen
     queryFn: () => getAdminBrands(agencyId),
   })
 
+  /*
+   * What the server will issue, mirrored so the admin reads it before saving.
+   * One brand names the login; several mean it reads more than one, so the
+   * partner's own name is the honest label.
+   */
+  const scopedBrandName =
+    brandIds.length === 1 ? (brands.find((b) => b.id === brandIds[0])?.name ?? null) : null
+  const issuedEmail = clientEmailFor(scopedBrandName ?? agencyName)
+
   const reset = () => {
-    setAdding(false); setName(''); setEmail(''); setEmailTouched(false); setPassword(''); setBrandIds([])
+    setAdding(false); setName(''); setPassword(''); setBrandIds([])
   }
 
   const create = useMutation({
     mutationFn: () =>
       createClientUser(agencyId, {
         name: name.trim(),
-        email: email.trim(),
         password,
         ...(brandIds.length > 0 ? { brandIds } : {}),
       }),
@@ -159,36 +154,40 @@ export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agen
           <Field label="Their name">
             <Input
               value={name}
-              onChange={(e) => {
-                setName(e.target.value)
-                if (!emailTouched) setEmail(suggestedEmail(e.target.value, agencyName))
-              }}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Priya Raman"
               autoFocus
             />
           </Field>
           <Field label="Their email">
             {/*
-              A client's address is their own, on their own domain — unlike a
-              Team login, where the server appends @workinxdigital.us and drops
-              anything after an @ (§5.5). Getting that backwards would create
-              client accounts on the company's domain.
+              Issued, not typed (owner, 2026-10-01).
 
-              Filled in from their name and the agency's as a starting point
-              (owner, 2026-10-01), and editable to the last character: the
-              suggestion is a guess about somebody else's domain, which is a
-              convenience and never a rule.
+              A client login now lives on a domain WorkinX owns, like a staff
+              address does (§5.5) and for the same reason: no request can create
+              an account on a domain the company does not control. It used to
+              carry the CLIENT's own domain, which produced addresses nobody
+              here could receive mail at.
+
+              The server derives it, so the field shows what is about to be
+              written rather than asking for it. The brand when the login is
+              scoped to exactly one, otherwise the agency — so the address says
+              what the credential can see.
             */}
-            <Input
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value)
-                setEmailTouched(true)
-              }}
-              placeholder={suggestedEmail('priya raman', agencyName) || 'priya@theirbrand.com'}
-              type="email"
-            />
+            <output
+              data-slot="control"
+              className="border-control bg-surface text-ink block rounded-md border px-3 py-2 text-dense"
+            >
+              {issuedEmail || <span className="text-ink-faint">Pick what they can see</span>}
+            </output>
+            <p className="text-ink-muted mt-1 text-micro">
+              {scopedBrandName
+                ? `Named after ${scopedBrandName}, the one brand this login reads.`
+                : `Named after ${agencyName}, which is the whole account.`}{' '}
+              One login per address — revoke the existing one to issue another.
+            </p>
           </Field>
+
           <Field label="Starting password" hint="At least 10 characters. Shown once when you save.">
             <Input value={password} onChange={(e) => setPassword(e.target.value)} />
           </Field>
@@ -220,7 +219,7 @@ export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agen
           </Field>
 
           <div className="flex items-center gap-2 sm:col-span-2">
-            <PrimaryButton type="submit" disabled={create.isPending || !name.trim() || !email.trim() || password.length < 10}>
+            <PrimaryButton type="submit" disabled={create.isPending || !name.trim() || !issuedEmail || password.length < 10}>
               {create.isPending ? 'Creating' : 'Create login'}
             </PrimaryButton>
             <GhostButton type="button" onClick={reset}>Cancel</GhostButton>
