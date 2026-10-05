@@ -8,7 +8,7 @@ import { Field } from '@/components/field'
 import { Pill } from '@/components/pill'
 import { EmailLocalInput } from '@/components/email-local-input'
 import { Input } from '@/components/ui/input'
-import { CLIENT_EMAIL_DOMAIN, clientEmailLocal } from '@/lib/default-password'
+import { CLIENT_EMAIL_DOMAIN } from '@/lib/default-password'
 import {
   createClientUser,
   getAdminBrands,
@@ -35,16 +35,17 @@ export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agen
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
   /**
-   * The part before the @, editable (owner, 2026-10-01).
+   * The part before the @ (owner, 2026-10-01).
    *
-   * The DOMAIN is the fixed half — it is a constant the server appends, so no
-   * request can put a client account on a domain the company does not own. The
-   * mailbox is a default, not a rule: it follows the scope until somebody
-   * types over it, and then stops, which is how the Team form treats its own
-   * mailbox (§5.5).
+   * Typed, and nothing fills it in. It was defaulted from the agency or brand
+   * for a few hours; the owner removed that — an address is somebody's, and a
+   * name guessed from the account is as likely to be wrong as right, which is
+   * exactly the kind of wrong that gets saved because it was already there.
+   *
+   * The DOMAIN remains the fixed half: a constant the server appends, so no
+   * request can put a client account on a domain the company does not own.
    */
   const [mailbox, setMailbox] = useState('')
-  const [mailboxTouched, setMailboxTouched] = useState(false)
   const [brandIds, setBrandIds] = useState<string[]>([])
   const [revoking, setRevoking] = useState<string | null>(null)
   const [issued, setIssued] = useState<{ email: string; password: string } | null>(null)
@@ -58,26 +59,18 @@ export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agen
     queryFn: () => getAdminBrands(agencyId),
   })
 
-  /*
-   * What the server will issue, mirrored so the admin reads it before saving.
-   * One brand names the login; several mean it reads more than one, so the
-   * partner's own name is the honest label.
-   */
-  const scopedBrandName =
-    brandIds.length === 1 ? (brands.find((b) => b.id === brandIds[0])?.name ?? null) : null
-  const defaultMailbox = clientEmailLocal(scopedBrandName ?? agencyName)
-  const effectiveMailbox = mailboxTouched ? mailbox : defaultMailbox
-  const issuedEmail = effectiveMailbox ? `${effectiveMailbox}@${CLIENT_EMAIL_DOMAIN}` : ''
+  /* What the server will issue, mirrored so the admin reads it before saving. */
+  const issuedEmail = mailbox.trim() ? `${mailbox.trim()}@${CLIENT_EMAIL_DOMAIN}` : ''
 
   const reset = () => {
-    setAdding(false); setName(''); setPassword(''); setBrandIds([]); setMailbox(''); setMailboxTouched(false)
+    setAdding(false); setName(''); setPassword(''); setBrandIds([]); setMailbox('')
   }
 
   const create = useMutation({
     mutationFn: () =>
       createClientUser(agencyId, {
         name: name.trim(),
-        emailLocal: effectiveMailbox,
+        emailLocal: mailbox.trim(),
         password,
         ...(brandIds.length > 0 ? { brandIds } : {}),
       }),
@@ -165,17 +158,11 @@ export function AgencyClients({ agencyId, agencyName }: { agencyId: string; agen
               what the credential can see.
             */}
             <EmailLocalInput
-              value={effectiveMailbox}
+              value={mailbox}
               domain={CLIENT_EMAIL_DOMAIN}
-              onChange={(v) => {
-                setMailbox(v)
-                setMailboxTouched(true)
-              }}
+              onChange={setMailbox}
             />
             <p className="text-ink-muted mt-1 text-micro">
-              {scopedBrandName
-                ? `Starts from ${scopedBrandName}, the one brand this login reads.`
-                : `Starts from ${agencyName}, which is the whole account.`}{' '}
               The domain is fixed. One login per address — revoke the existing one to issue
               another.
             </p>
