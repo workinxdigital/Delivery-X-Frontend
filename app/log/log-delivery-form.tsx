@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { BrandInput } from '@/components/brand-input'
 import { Combobox, type ComboboxOption } from '@/components/combobox'
@@ -22,6 +22,7 @@ import {
 } from '@/lib/api/client'
 import type { Complexity } from '@/lib/api/types'
 import { todayInIST, formatCategory } from '@/lib/format'
+import { draftKey, readDraft, writeDraft } from '@/lib/form-draft'
 import { cn } from '@/lib/utils'
 import { PrimaryButton } from '@/components/primary-button'
 import { isPM, useSession } from '@/components/session'
@@ -49,6 +50,21 @@ const EMPTY: FormState = {
   deliveredOn: todayInIST(),
   deliveredByName: '',
   notes: '',
+}
+
+/**
+ * Whether a form holds anything a person would be sorry to lose.
+ *
+ * The date and the deliverer are filled in by default, so a draft judged on
+ * "does it differ from EMPTY" would be saved the moment the screen opened and
+ * restored on every visit — which is noise, not rescue. This asks the narrower
+ * question: has somebody actually typed or chosen something.
+ */
+function worthKeeping(form: FormState): boolean {
+  if (form.agencyId || form.brandName.trim() || form.notes.trim()) return true
+  return form.asins.some(
+    (a) => a.code.trim() || a.productName.trim() || a.complexity || a.serviceIds.length > 0,
+  )
 }
 
 export function LogDeliveryForm() {
@@ -79,6 +95,37 @@ export function LogDeliveryForm() {
    * without immediately reopening it as "the last one".
    */
   const [openAsin, setOpenAsin] = useState<string | null>(null)
+
+  /**
+   * The unfinished delivery, kept across tabs and reloads (owner, 2026-10-09).
+   *
+   * Restored in an effect rather than as the initial state, and that is not a
+   * style choice: `/log` is prerendered (§5.1), so anything read from storage
+   * during render would differ from the server's HTML and React does not patch
+   * a mismatch — the same trap the stale `max` date fell into. After mount is
+   * the only safe moment.
+   */
+  const key = draftKey('log', user?.id)
+  const [restoredDraft, setRestoredDraft] = useState(false)
+  const restoreAttempted = useRef(false)
+
+  useEffect(() => {
+    /* Once per mount. Without the guard a later render with the same key would
+       pull the stored copy back over whatever is being typed. */
+    if (!key || restoreAttempted.current) return
+    restoreAttempted.current = true
+    const saved = readDraft<FormState>(key)
+    if (!saved || !worthKeeping(saved)) return
+    setForm(saved)
+    setRestoredDraft(true)
+  }, [key])
+
+  useEffect(() => {
+    /* Not before the restore has had its turn: an empty first render would
+       otherwise clear the very draft it is about to read. */
+    if (!key || !restoreAttempted.current) return
+    writeDraft(key, worthKeeping(form) ? form : null)
+  }, [key, form])
   const firstFieldRef = useRef<HTMLButtonElement>(null)
 
   /**
@@ -209,6 +256,9 @@ export function LogDeliveryForm() {
       }))
       setErrors({})
       setDuplicateAck(false)
+      /* Whatever is on screen now is the carry-over (§5.1), not a rescued
+         draft, so the notice has nothing left to explain. */
+      setRestoredDraft(false)
       void queryClient.invalidateQueries({ queryKey: ['tasks'] })
       void queryClient.invalidateQueries({ queryKey: ['brands'] })
       firstFieldRef.current?.focus()
@@ -365,6 +415,37 @@ export function LogDeliveryForm() {
       /* Bands separated by hairlines. A ledger is ruled, not boxed. */
       className="divide-rule divide-y"
     >
+      {/*
+        Said, not silent (owner, 2026-10-09).
+
+        A form that quietly refills itself is unnerving: the one thing worse
+        than losing work is not knowing whether what you are looking at is
+        yours. It names what happened and offers the way out, because the
+        other half of restoring a draft is being able to refuse it.
+      */}
+      {restoredDraft && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pb-4">
+          <p className="text-ink-muted text-micro">
+            Picked up where you left off — this entry was never saved.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setForm({ ...EMPTY, deliveredOn: todayInIST() })
+              setOpenAsin(null)
+              setErrors({})
+              setDuplicateAck(false)
+              setRestoredDraft(false)
+              writeDraft(key, null)
+              firstFieldRef.current?.focus()
+            }}
+            className="text-ink-muted hover:text-ink text-micro underline decoration-dotted underline-offset-2"
+          >
+            Start a fresh one
+          </button>
+        </div>
+      )}
+
       <Band title="Who it is for" className="pb-7">
         <Field label="Agency or direct client" htmlFor="agency" error={errors.agencyId}>
           <Combobox
