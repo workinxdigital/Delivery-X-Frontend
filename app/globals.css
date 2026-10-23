@@ -310,11 +310,12 @@
    * Fixed scale, ratio ~1.15. Dense, because this is a data tool — but one
    * people read all day, which the first version of this forgot.
    *
-   * Lifted a step on 2026-10-23 (owner): micro sat at 11px and carries 216
+   * Lifted TWICE on 2026-10-23 (owner): micro sat at 11px and carries 216
    * usages, which is every hint, label and badge on the logging form and the
    * ledger — the two screens a PM lives in. Dense carries another 142. At
    * those sizes the product read as something to glance at rather than work
    * in, and "dense" had quietly become "small", which is not the same claim.
+   * One step was not enough; it now runs 13/14/15/16.
    *
    * Each step moved up one pixel rather than being rescaled: the ratio and
    * therefore the hierarchy are unchanged, and the layouts measured to the
@@ -325,12 +326,12 @@
    * The printed statement is NOT on this scale (§5.7 sets its own sizes), so
    * a client's bill is untouched by anything here.
    */
-  --text-micro: 0.75rem;
-  --text-micro--line-height: 1.125rem;
-  --text-small: 0.8125rem;
-  --text-small--line-height: 1.25rem;
-  --text-dense: 0.875rem;
-  --text-dense--line-height: 1.375rem;
+  --text-micro: 0.8125rem;
+  --text-micro--line-height: 1.25rem;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.375rem;
+  --text-dense: 0.9375rem;
+  --text-dense--line-height: 1.5rem;
 
   --color-paper: var(--paper);
   --color-surface: var(--surface);
@@ -413,9 +414,9 @@
     background: var(--paper);
     color: var(--ink);
     font-family: var(--font-sans);
-    /* Explicit base: unstyled text lands at 15px, not the browser's 16 — a step
-       up from the 14 it used to be, with the rest of the scale (2026-10-23). */
-    font-size: 0.9375rem;
+    /* Explicit base: unstyled text lands at 16px, up from 14 in two steps on
+       2026-10-23, with the rest of the scale. */
+    font-size: 1rem;
     line-height: 1.5;
     /* Every numeral in the product aligns down a column. This is a ledger. */
     font-variant-numeric: tabular-nums;
