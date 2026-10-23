@@ -473,14 +473,15 @@ function Th({
       aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : undefined}
       style={headPad ? { paddingRight: `calc(0.5rem + ${headPad})` } : undefined}
       className={cn(
-        /* px-2.5, not px-3: the type scale went up two steps on 2026-10-23 and
+        /* px-2, not px-3: the type scale went up two steps on 2026-10-23 and
            eleven columns stopped fitting — 1394px of table in 1350px of room
            at a 1400px window, which is the horizontal scrollbar §5.11 widened
-           this page to be rid of. Four pixels a column buys back more than the
-           44 that were missing, and padding is the cheapest thing on this row
-           to spend: the alternative was truncating names that already
-           truncate. */
-        'px-2.5 py-2.5 text-micro font-medium tracking-[0.06em] uppercase whitespace-nowrap',
+           this page to be rid of. px-2.5 recovered 40 of the 44 and left it
+           4px over, which is a fit that fails on the first long brand name;
+           px-2 lands at 1310 and leaves room to be wrong in. Padding is the
+           cheapest thing on this row to spend — the alternative was
+           truncating names that already truncate. */
+        'px-2 py-2.5 text-micro font-medium tracking-[0.06em] uppercase whitespace-nowrap',
         active ? 'text-ink' : 'text-ink-muted',
         align === 'right' ? 'text-right' : 'text-left',
       )}
@@ -516,7 +517,7 @@ function Td({
       title={title}
       className={cn(
         /* Matches Th, so the columns line up (see the note there). */
-        'px-2.5 py-3 align-middle',
+        'px-2 py-3 align-middle',
         align === 'right' && 'text-right',
         className,
       )}
