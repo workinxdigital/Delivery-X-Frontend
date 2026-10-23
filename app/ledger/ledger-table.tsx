@@ -473,7 +473,14 @@ function Th({
       aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : undefined}
       style={headPad ? { paddingRight: `calc(0.5rem + ${headPad})` } : undefined}
       className={cn(
-        'px-3 py-2.5 text-micro font-medium tracking-[0.06em] uppercase whitespace-nowrap',
+        /* px-2.5, not px-3: the type scale went up two steps on 2026-10-23 and
+           eleven columns stopped fitting — 1394px of table in 1350px of room
+           at a 1400px window, which is the horizontal scrollbar §5.11 widened
+           this page to be rid of. Four pixels a column buys back more than the
+           44 that were missing, and padding is the cheapest thing on this row
+           to spend: the alternative was truncating names that already
+           truncate. */
+        'px-2.5 py-2.5 text-micro font-medium tracking-[0.06em] uppercase whitespace-nowrap',
         active ? 'text-ink' : 'text-ink-muted',
         align === 'right' ? 'text-right' : 'text-left',
       )}
@@ -508,7 +515,8 @@ function Td({
     <td
       title={title}
       className={cn(
-        'px-3 py-3 align-middle',
+        /* Matches Th, so the columns line up (see the note there). */
+        'px-2.5 py-3 align-middle',
         align === 'right' && 'text-right',
         className,
       )}
