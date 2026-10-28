@@ -315,7 +315,12 @@
    * ledger — the two screens a PM lives in. Dense carries another 142. At
    * those sizes the product read as something to glance at rather than work
    * in, and "dense" had quietly become "small", which is not the same claim.
-   * One step was not enough; it now runs 13/14/15/16.
+   * Two were not enough either. It now runs 14/15/16/16 — the FLOOR raised
+   * rather than the whole scale stretched again, which is the shape the
+   * complaint actually had: nobody said the headings were small. The range
+   * narrows as a result, and that is the trade — on a screen whose smallest
+   * text is a hint beside a field, a wide type scale was buying hierarchy
+   * nobody needed at the cost of legibility everybody did.
    *
    * Each step moved up one pixel rather than being rescaled: the ratio and
    * therefore the hierarchy are unchanged, and the layouts measured to the
@@ -326,11 +331,11 @@
    * The printed statement is NOT on this scale (§5.7 sets its own sizes), so
    * a client's bill is untouched by anything here.
    */
-  --text-micro: 0.8125rem;
-  --text-micro--line-height: 1.25rem;
-  --text-small: 0.875rem;
-  --text-small--line-height: 1.375rem;
-  --text-dense: 0.9375rem;
+  --text-micro: 0.875rem;
+  --text-micro--line-height: 1.375rem;
+  --text-small: 0.9375rem;
+  --text-small--line-height: 1.5rem;
+  --text-dense: 1rem;
   --text-dense--line-height: 1.5rem;
 
   --color-paper: var(--paper);
